@@ -88,20 +88,38 @@
       setTimeout(function () {$("#notification-alt").removeClass(categoryClass)}, timeout + 750)
     }
 
+    // User identity (persisted as cookies + localStorage for phone quick-return)
+    const _USER_ID_COOKIE = 'pikaraoke_user_id';
+    const _LS_USER_ID = 'pikaraoke_user_id';
+    const _LS_USERNAME = 'pikaraoke_username';
+
+    function getStoredUserId() {
+      var raw = Cookies.get(_USER_ID_COOKIE);
+      return (raw && /^\d+$/.test(raw)) ? parseInt(raw) : null;
+    }
+
+    function setUserIdentity(id, name) {
+      Cookies.set(_USER_ID_COOKIE, String(id), { expires: 3650, path: '/' });
+      Cookies.set('user', name, { expires: 3650, path: '/' });
+      try {
+        localStorage.setItem(_LS_USER_ID, String(id));
+        localStorage.setItem(_LS_USERNAME, name);
+      } catch(e) {}
+      $("#current-user span").text(name);
+      $("#current-user").removeClass("is-hidden");
+    }
+
+    function clearUserIdentity() {
+      Cookies.remove(_USER_ID_COOKIE, { path: '/' });
+      Cookies.remove('user', { path: '/' });
+    }
+
+    // Keep existing setUserCookie/getUserCookie for backward-compat with other templates.
+    // When a user is already identified via the picker, the 'user' cookie is already set.
     function setUserCookie(reload=false) {
-      var user = Cookies.get("user");
-      if (!user) {
-        let name = window.prompt(
-          // {# MSG: Prompt which asks the user their name when they first try to add to the queue. #}
-          "{{ _('Please enter your name. This will show up next to the songs you queue up from this device.') }}"
-        );
-        if (name) {
-          Cookies.set("user", name, { expires: 3650, path: '/' });
-        }
-        else {
-          Cookies.set("user", `Anon-${generateRandomString(4)}`, { expires: 3650 });
-        }
-        reload && location.reload();
+      if (!Cookies.get("user")) {
+        // Fallback: open picker so user can identify themselves
+        showUserPicker();
       }
     }
 
@@ -109,8 +127,115 @@
       return Cookies.get("user");
     }
 
+    // ---- User picker modal ----
+
+    function showUserPicker(onComplete) {
+      window._pickerCallback = onComplete || null;
+      var lsId = null, lsName = null;
+      try {
+        lsId = localStorage.getItem(_LS_USER_ID);
+        lsName = localStorage.getItem(_LS_USERNAME);
+      } catch(e) {}
+
+      if (lsId && lsName) {
+        // Returning device: show one-tap confirmation
+        $("#picker-welcome-name").text(lsName);
+        $("#picker-returning").show();
+        $("#picker-full").hide();
+        $("#picker-confirm-btn").off("click").on("click", function () {
+          // Re-verify user still exists on server before confirming
+          fetch("/users").then(r => r.json()).then(function(users) {
+            var found = users.find(u => String(u.id) === String(lsId));
+            if (found) {
+              setUserIdentity(found.id, found.username);
+              closePickerModal();
+            } else {
+              // User was deleted — show full picker
+              try { localStorage.removeItem(_LS_USER_ID); localStorage.removeItem(_LS_USERNAME); } catch(e) {}
+              loadFullPicker();
+            }
+          });
+        });
+        $("#picker-switch-btn").off("click").on("click", function (e) {
+          e.preventDefault();
+          loadFullPicker();
+        });
+      } else {
+        loadFullPicker();
+      }
+
+      $("#user-picker-modal").addClass("is-active");
+    }
+
+    function loadFullPicker() {
+      $("#picker-returning").hide();
+      $("#picker-full").show();
+      fetch("/users").then(r => r.json()).then(function(users) {
+        var $list = $("#picker-user-list").empty();
+        if (users.length === 0) {
+          $list.append('<p class="has-text-grey">{{ _("No users yet — create one below.") }}</p>');
+        } else {
+          users.forEach(function(u) {
+            var btn = $('<button class="button is-fullwidth mb-1"></button>').text(u.username);
+            btn.on("click", function() {
+              setUserIdentity(u.id, u.username);
+              closePickerModal();
+            });
+            $list.append(btn);
+          });
+        }
+      });
+    }
+
+    function closePickerModal() {
+      $("#user-picker-modal").removeClass("is-active");
+      if (window._pickerCallback) {
+        window._pickerCallback();
+        window._pickerCallback = null;
+      }
+    }
+
+    function checkAndShowPicker() {
+      if (!getStoredUserId()) {
+        showUserPicker();
+      }
+    }
+
     $(function () {
       connectSocket();
+
+      // Show user picker on every load for unidentified devices
+      checkAndShowPicker();
+
+      // Create-new-user handler in picker modal
+      $("#picker-create-btn").on("click", function () {
+        var name = $("#picker-new-username").val().trim();
+        if (!name) return;
+        fetch("/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: name }),
+        }).then(r => r.json()).then(function(user) {
+          if (user.id) {
+            setUserIdentity(user.id, user.username);
+            closePickerModal();
+          }
+        });
+      });
+
+      $("#picker-new-username").on("keydown", function(e) {
+        if (e.key === "Enter") $("#picker-create-btn").click();
+      });
+
+      $("#picker-guest-btn").on("click", function (e) {
+        e.preventDefault();
+        closePickerModal();
+      });
+
+      // Close modal on background click
+      $("#user-picker-modal .modal-background").on("click", function () {
+        closePickerModal();
+      });
 
       $("#notification-close").click(function () {
         $(".notification").hide();
@@ -132,6 +257,9 @@
       }
       if (currentPath == "/browse") {
         $("#browse").addClass("is-active")
+      }
+      if (currentPath == "/favorites") {
+        $("#favorites").addClass("is-active")
       }
       if (currentPath == "/info") {
         $("#info").addClass("is-active")
@@ -225,6 +353,11 @@
           {# MSG: Navigation link for the page where the user can add existing songs to the queue. #}
           <span>{% trans %}Browse{% endtrans %}</span>
         </a>
+        <a id="favorites" class="navbar-item" href="{{ url_for('users.favorites_page') }}">
+          <i title="Favorites" style="font-style: normal; margin-right: 2px">&#9733;</i>
+          {# MSG: Navigation link for the user's personal favorites playlist. #}
+          <span>{% trans %}Favorites{% endtrans %}</span>
+        </a>
         <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
           <span aria-hidden="true"></span>
           <span aria-hidden="true"></span>
@@ -275,6 +408,70 @@
 
   {% block body %}
   {% endblock %}
+
+  <!-- User picker modal -->
+  <div id="user-picker-modal" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card" style="max-width: 420px; width: 95%">
+      <header class="modal-card-head">
+        <p class="modal-card-title">
+          {# MSG: Title of the user selection modal. #}
+          {% trans %}Who are you?{% endtrans %}
+        </p>
+      </header>
+      <section class="modal-card-body">
+
+        <!-- Returning device: one-tap confirm -->
+        <div id="picker-returning" style="display:none">
+          <p class="mb-3">
+            {# MSG: Greeting shown when the app recognises a returning user. #}
+            {% trans %}Welcome back,{% endtrans %} <strong id="picker-welcome-name"></strong>!
+          </p>
+          <button id="picker-confirm-btn" class="button is-success is-fullwidth mb-2">
+            {# MSG: Button to confirm identity as the returning user. #}
+            {% trans %}That's me!{% endtrans %}
+          </button>
+          <a id="picker-switch-btn" href="#">
+            {# MSG: Link to switch to a different user. #}
+            {% trans %}Not me &mdash; switch user{% endtrans %}
+          </a>
+        </div>
+
+        <!-- Full user picker -->
+        <div id="picker-full" style="display:none">
+          <p class="mb-2">
+            {# MSG: Instruction to select a user from the list. #}
+            {% trans %}Select your name:{% endtrans %}
+          </p>
+          <div id="picker-user-list" class="mb-4" style="max-height: 240px; overflow-y: auto"></div>
+
+          <hr>
+          <p class="mb-2">
+            {# MSG: Prompt to create a new user account. #}
+            {% trans %}Or create a new user:{% endtrans %}
+          </p>
+          <div class="field has-addons">
+            <div class="control is-expanded">
+              <input id="picker-new-username" class="input" type="text" placeholder="{{ _('Your name') }}" maxlength="40">
+            </div>
+            <div class="control">
+              <button id="picker-create-btn" class="button is-primary">
+                {# MSG: Button to save a new user. #}
+                {% trans %}Save{% endtrans %}
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+      <footer class="modal-card-foot" style="justify-content: flex-end">
+        <a id="picker-guest-btn" href="#" class="has-text-grey">
+          {# MSG: Link to skip user selection and continue anonymously. #}
+          {% trans %}Continue as guest{% endtrans %}
+        </a>
+      </footer>
+    </div>
+  </div>
 
 </body>
 

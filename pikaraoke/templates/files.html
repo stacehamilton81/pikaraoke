@@ -28,6 +28,28 @@
 				}
 			});
 		});
+
+		$(document).on("click", ".fav-toggle", function (e) {
+			e.preventDefault();
+			if (!getStoredUserId()) {
+				showUserPicker(function () { $(e.target).closest(".fav-toggle").trigger("click"); });
+				return;
+			}
+			var btn = $(this);
+			var filePath = decodeURIComponent(btn.data("song"));
+			var isFav = btn.hasClass("is-favorited");
+			fetch("/api/favorites", {
+				method: isFav ? "DELETE" : "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ file_path: filePath }),
+			}).then(function (r) {
+				if (r.ok) {
+					btn.toggleClass("is-favorited");
+					btn.find("span.fav-star").text(isFav ? "☆" : "★");
+					btn.attr("title", isFav ? "Add to favorites" : "Remove from favorites");
+				}
+			});
+		});
 	});
 </script>
 
@@ -134,6 +156,16 @@
 			</a>
 		</td>
 		<td class="break-word" style="padding-right: 0">{{display_name}}</td>
+		<td style="padding-right: 0; padding-left: 4px">
+			{%- set is_fav = song in favorite_paths -%}
+			<a
+				class="fav-toggle {% if is_fav %}is-favorited{% endif %} has-text-warning"
+				data-song="{{ url_escape(song.encode('utf-8','surrogateescape')) }}"
+				href="#"
+				title="{% if is_fav %}Remove from favorites{% else %}Add to favorites{% endif %}"
+				style="text-decoration: none; font-size: 1.1em"
+			><span class="fav-star">{% if is_fav %}&#9733;{% else %}&#9734;{% endif %}</span></a>
+		</td>
 		{% if admin %}
 		<td style="padding-right: 0">
 			<a

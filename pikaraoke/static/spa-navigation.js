@@ -79,23 +79,15 @@
         // Remove any existing handlers first to avoid duplicates
         $(document).off('click', '#current-user');
 
-        // Bind with event delegation
+        // Bind with event delegation — opens the user picker modal to switch identity
         $(document).on('click', '#current-user', function(e) {
             e.preventDefault();
-            // Get the current name from the cookie dynamically
-            let currentName = Cookies.get("user");
-            var promptMsg = (window.translations && window.translations.promptChangeUsername)
-                ? window.translations.promptChangeUsername.replace('CURRENT_NAME', currentName)
-                : "Do you want to change the name of the person using this device? This will show up on queued songs. Current: " + currentName;
-            let name = window.prompt(promptMsg);
-            // Only update if user clicked OK and entered a non-empty name
-            // null = Cancel clicked, "" = OK with empty input
-            if (name !== null && name.trim() !== "") {
-                Cookies.set("user", name, { expires: 3650, path: '/' });
-                // Update the displayed name without reloading
-                $("#current-user span").text(name);
+            if (typeof clearUserIdentity === 'function') {
+                clearUserIdentity();
             }
-            // Remove focus from the link to prevent CSS focus styling (black background)
+            if (typeof showUserPicker === 'function') {
+                showUserPicker();
+            }
             $(this).blur();
         });
     }
@@ -412,6 +404,8 @@
             $('#search').addClass('is-active');
         } else if (path === '/browse' || path.startsWith('/browse')) {
             $('#browse').addClass('is-active');
+        } else if (path === '/favorites') {
+            $('#favorites').addClass('is-active');
         } else if (path === '/info') {
             $('#info').addClass('is-active');
         }

@@ -50,6 +50,7 @@ from pikaraoke.routes.search import search_bp
 from pikaraoke.routes.socket_events import setup_socket_events
 from pikaraoke.routes.splash import splash_bp
 from pikaraoke.routes.stream import stream_bp
+from pikaraoke.routes.users import users_bp
 
 _ = flask_babel.gettext
 
@@ -94,6 +95,7 @@ _api_blueprints = [
     nowplaying_bp,
     stream_bp,
     metadata_bp,
+    users_bp,
 ]
 
 # Blueprints hidden from /apidocs (internal UI routes)

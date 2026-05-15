@@ -35,6 +35,22 @@ CREATE TABLE IF NOT EXISTS metadata (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL COLLATE NOCASE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    file_path TEXT NOT NULL,
+    added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, file_path)
+);
+
+CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
 """
 
 
@@ -184,6 +200,75 @@ class KaraokeDatabase:
         with self._lock:
             result = self._conn.execute("PRAGMA integrity_check").fetchone()[0]
             return result == "ok", result
+
+    # ------------------------------------------------------------------
+    # Users
+    # ------------------------------------------------------------------
+
+    def get_users(self) -> list[dict]:
+        """Return all users as a list of {id, username} dicts."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, username FROM users ORDER BY username COLLATE NOCASE"
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def create_user(self, username: str) -> dict:
+        """Insert a user (or return existing) and return {id, username}."""
+        with self._lock, self._conn:
+            self._conn.execute(
+                "INSERT OR IGNORE INTO users (username) VALUES (?)", (username,)
+            )
+            row = self._conn.execute(
+                "SELECT id, username FROM users WHERE username = ? COLLATE NOCASE", (username,)
+            ).fetchone()
+            return dict(row)
+
+    def get_user_by_id(self, user_id: int) -> dict | None:
+        """Return {id, username} for the given user ID, or None."""
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT id, username FROM users WHERE id = ?", (user_id,)
+            ).fetchone()
+            return dict(row) if row else None
+
+    # ------------------------------------------------------------------
+    # Favorites
+    # ------------------------------------------------------------------
+
+    def get_favorites(self, user_id: int) -> list[str]:
+        """Return file paths favorited by the given user."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT file_path FROM favorites WHERE user_id = ? ORDER BY added_at DESC",
+                (user_id,),
+            ).fetchall()
+            return [row[0] for row in rows]
+
+    def add_favorite(self, user_id: int, file_path: str) -> bool:
+        """Add a favorite. Returns True on success, False if already exists."""
+        try:
+            with self._lock, self._conn:
+                self._conn.execute(
+                    "INSERT INTO favorites (user_id, file_path) VALUES (?, ?)",
+                    (user_id, file_path),
+                )
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+    def remove_favorite(self, user_id: int, file_path: str) -> bool:
+        """Remove a favorite. Returns True if a row was deleted."""
+        with self._lock, self._conn:
+            cursor = self._conn.execute(
+                "DELETE FROM favorites WHERE user_id = ? AND file_path = ?",
+                (user_id, file_path),
+            )
+            return cursor.rowcount > 0
+
+    # ------------------------------------------------------------------
+    # Maintenance
+    # ------------------------------------------------------------------
 
     def close(self) -> None:
         """Close the database connection."""

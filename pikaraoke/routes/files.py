@@ -101,6 +101,12 @@ def browse():
         href=pagination_href,
     )
     start_index = (page - 1) * results_per_page
+
+    user_id_raw = request.cookies.get("pikaraoke_user_id")
+    favorite_paths: set[str] = set()
+    if user_id_raw and user_id_raw.isdigit():
+        favorite_paths = set(k.db.get_favorites(int(user_id_raw)))
+
     return render_template(
         "files.html",
         pagination=pagination,
@@ -112,6 +118,7 @@ def browse():
         songs=songs[start_index : start_index + results_per_page],
         admin=is_admin(),
         current_url=current_url,
+        favorite_paths=favorite_paths,
     )
 
 
