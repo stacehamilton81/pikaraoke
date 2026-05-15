@@ -232,6 +232,7 @@
         if ($link.hasClass('no-spa') ||
             $link.hasClass('edit-button') ||
             $link.hasClass('add-song-link') ||  // Browse page add to queue
+            $link.hasClass('fav-queue-link') ||  // Favorites page add to queue
             $link.hasClass('confirm-clear') ||   // Clear queue button (has its own handler)
             $link.hasClass('confirm-delete') ||  // Delete song from queue (has its own handler)
             $link.hasClass('confirm-delete-file') ||  // Delete song file from library (has its own handler)
