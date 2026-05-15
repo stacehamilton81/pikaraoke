@@ -129,10 +129,20 @@
     }
   };
 
+  // Favorites state (file path set, populated on load)
+  window.userFavoriteFiles = window.userFavoriteFiles || new Set();
+
+  window.queuePage_loadFavorites = function() {
+    fetch('/api/favorites')
+      .then(function(r) { return r.json(); })
+      .then(function(paths) { window.userFavoriteFiles = new Set(paths); });
+  };
+
   // Column width constants
   var COL_WIDTH = {
     number: '35px',
     drag: '44px',
+    star: '32px',
     options: '50px'
   };
 
@@ -308,6 +318,12 @@
     html += '<span class="is-size-7 has-text-weight-bold is-hidden-tablet" style="width: 100%;">' + e.title + '</span>';
     html += '</div></td>';
 
+    var isFav = window.userFavoriteFiles.has(e.file);
+    html += '<td style="width: ' + COL_WIDTH.star + '; vertical-align: middle; text-align: center; padding: 0;">';
+    html += '<a class="queue-fav-toggle has-text-warning" data-file="' + escape(e.file) + '" href="#" title="' + (isFav ? 'Remove from favorites' : 'Add to favorites') + '" style="text-decoration:none; font-size: 1.1em">';
+    html += isFav ? '&#9733;' : '&#9734;';
+    html += '</a></td>';
+
     if (isAdmin) {
       html += '<td style="width: ' + COL_WIDTH.options + '; vertical-align: middle; text-align: right; padding-right: 10px;">';
       html += '<a class="has-text-grey-light is-small is-text queue-song-options-btn" data-index="' + index + '" data-file="' + escape(e.file) + '" data-title="' + escape(e.title) + '" title="{{ _("Options") }}">';
@@ -323,7 +339,7 @@
     var html = "<tbody>";
     var queue = window.queuePageState.queue;
     var np = window.queuePageState.nowPlaying;
-    var colSpan = isAdmin ? 4 : 2;
+    var colSpan = isAdmin ? 5 : 3;
 
     if (np && np.now_playing) {
       html += generateNowPlayingRow(np);
@@ -449,8 +465,36 @@
 
   // Initialize
   $(function() {
+    window.queuePage_loadFavorites();
     window.queuePage_getDownloads();
     window.queuePage_getQueue();
+
+    $(document).on('click', '.queue-fav-toggle', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!getStoredUserId()) {
+        showUserPicker();
+        return;
+      }
+      var btn = $(this);
+      var filePath = decodeURIComponent(btn.data('file'));
+      var isFav = window.userFavoriteFiles.has(filePath);
+      fetch('/api/favorites', {
+        method: isFav ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_path: filePath })
+      }).then(function(r) {
+        if (r.ok) {
+          if (isFav) {
+            window.userFavoriteFiles.delete(filePath);
+            btn.html('&#9734;').attr('title', 'Add to favorites');
+          } else {
+            window.userFavoriteFiles.add(filePath);
+            btn.html('&#9733;').attr('title', 'Remove from favorites');
+          }
+        }
+      });
+    });
 
       // Close modals on background click
       $('.modal-background').click(function() {
