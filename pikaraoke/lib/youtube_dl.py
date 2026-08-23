@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 
@@ -62,6 +63,21 @@ def get_youtube_id_from_url(url: str) -> str | None:
         return None
 
 
+def _find_uv_executable() -> str | None:
+    """Locate the uv executable, checking PATH then its default install dir.
+
+    pikaraoke's official installers set it up via `uv tool install`, which
+    creates a venv without pip, so upgrading yt-dlp there requires `uv pip`
+    instead of `python -m pip`.
+    """
+    found = shutil.which("uv")
+    if found:
+        return found
+    exe_name = "uv.exe" if sys.platform == "win32" else "uv"
+    candidate = os.path.expanduser(os.path.join("~", ".local", "bin", exe_name))
+    return candidate if os.path.isfile(candidate) else None
+
+
 def upgrade_youtubedl() -> str:
     """Upgrade yt-dlp to the latest version.
 
@@ -89,18 +105,30 @@ def upgrade_youtubedl() -> str:
 
     upgrade_success = False
     if "pip" in output.lower():
-        pip_cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"]
-
-        # Outside a venv, pip requires --break-system-packages on modern Python
-        if sys.prefix == sys.base_prefix:
-            pip_cmd.append("--break-system-packages")
+        uv_exe = _find_uv_executable()
+        if uv_exe:
+            # uv tool venvs (the official install method) don't ship pip
+            upgrade_cmd = [
+                uv_exe,
+                "pip",
+                "install",
+                "--python",
+                sys.executable,
+                "--upgrade",
+                "yt-dlp",
+            ]
+        else:
+            upgrade_cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"]
+            # Outside a venv, pip requires --break-system-packages on modern Python
+            if sys.prefix == sys.base_prefix:
+                upgrade_cmd.append("--break-system-packages")
 
         try:
-            logging.info(f"yt-dlp is outdated! Attempting upgrade via {pip_cmd}...")
-            subprocess.check_output(pip_cmd, stderr=subprocess.STDOUT)
+            logging.info(f"yt-dlp is outdated! Attempting upgrade via {upgrade_cmd}...")
+            subprocess.check_output(upgrade_cmd, stderr=subprocess.STDOUT)
             upgrade_success = True
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
-            logging.error(f"Failed to upgrade yt-dlp using pip: {e}")
+            logging.error(f"Failed to upgrade yt-dlp using {upgrade_cmd[0]}: {e}")
 
     youtubedl_version = get_youtubedl_version()
     if upgrade_success:
