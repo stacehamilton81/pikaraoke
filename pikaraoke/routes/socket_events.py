@@ -3,8 +3,9 @@
 import logging
 
 from flask import request
+from flask_socketio import join_room
 
-from pikaraoke.lib.current_app import get_karaoke_instance
+from pikaraoke.lib.current_app import get_current_user_id, get_karaoke_instance
 
 # Track connected splash screen clients and the elected master
 splash_connections = set()
@@ -17,6 +18,25 @@ def setup_socket_events(socketio):
     Args:
         socketio: The SocketIO instance.
     """
+
+    def _join_user_room() -> None:
+        """Join the current client to their user-specific room, if identified.
+
+        Lets singer_up_next notifications target only that user's browser(s).
+        """
+        user_id = get_current_user_id()
+        if user_id:
+            join_room(f"user_{user_id}")
+
+    @socketio.on("connect")
+    def handle_connect() -> None:
+        """Join the connecting client to their user-specific room, if already identified."""
+        _join_user_room()
+
+    @socketio.on("identify")
+    def handle_identify() -> None:
+        """Re-join the user room once identity is set (e.g. first-time picker, after connect)."""
+        _join_user_room()
 
     @socketio.on("end_song")
     def end_song(reason: str) -> None:

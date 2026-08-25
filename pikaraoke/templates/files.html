@@ -166,6 +166,12 @@
 				style="text-decoration: none; font-size: 1.1em"
 			><span class="fav-star">{% if is_fav %}&#9733;{% else %}&#9734;{% endif %}</span></a>
 		</td>
+		<td style="padding-right: 0">
+			{%- set play_count = play_counts.get(song, 0) -%}
+			{% if play_count > 0 %}
+			<span class="has-text-grey is-size-7" title="Times played">{{ play_count }}&times;</span>
+			{% endif %}
+		</td>
 		{% if admin %}
 		<td style="padding-right: 0">
 			<a

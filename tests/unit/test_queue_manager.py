@@ -605,3 +605,91 @@ class TestQueueManagerHelpers:
 
         qm.enqueue("/songs/song1---abc.mp4", "LimitedUser")
         assert qm.is_user_limited("LimitedUser") is True
+
+
+class TestSingerUpNext:
+    """Test the singer_up_next notification: fires when a different, identified
+    user's song becomes first in the queue (about to play next)."""
+
+    def _captured(self, queue_manager):
+        captured = []
+        queue_manager._events.on(
+            "singer_up_next", lambda user_id, title: captured.append((user_id, title))
+        )
+        return captured
+
+    def test_enqueue_into_empty_queue_notifies_identified_user(self, queue_manager):
+        captured = self._captured(queue_manager)
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1", user_id=42)
+
+        assert captured == [(42, "song1")]
+
+    def test_enqueue_into_empty_queue_skips_unidentified_user(self, queue_manager):
+        """No user_id (e.g. legacy/anonymous queueing) means no notification target."""
+        captured = self._captured(queue_manager)
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1")
+
+        assert captured == []
+
+    def test_enqueue_behind_existing_head_does_not_notify(self, queue_manager):
+        """Adding to the back of the queue doesn't change who's up next."""
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1", user_id=1)
+        captured = self._captured(queue_manager)
+        queue_manager.enqueue("/songs/song2---def.mp4", "User2", user_id=2)
+
+        assert captured == []
+
+    def test_pop_next_notifies_new_head(self, queue_manager):
+        """Popping the current head reveals a new up-next singer."""
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1", user_id=1)
+        queue_manager.enqueue("/songs/song2---def.mp4", "User2", user_id=2)
+        captured = self._captured(queue_manager)
+
+        queue_manager.pop_next()
+
+        assert captured == [(2, "song2")]
+
+    def test_pop_next_on_last_song_notifies_nothing(self, queue_manager):
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1", user_id=1)
+        captured = self._captured(queue_manager)
+
+        queue_manager.pop_next()
+
+        assert captured == []
+
+    def test_move_to_top_notifies_new_head(self, queue_manager):
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1", user_id=1)
+        queue_manager.enqueue("/songs/song2---def.mp4", "User2", user_id=2)
+        captured = self._captured(queue_manager)
+
+        queue_manager.move_to_top("/songs/song2---def.mp4")
+
+        assert captured == [(2, "song2")]
+
+    def test_delete_head_notifies_new_head(self, queue_manager):
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1", user_id=1)
+        queue_manager.enqueue("/songs/song2---def.mp4", "User2", user_id=2)
+        captured = self._captured(queue_manager)
+
+        queue_manager.queue_edit("/songs/song1---abc.mp4", "delete")
+
+        assert captured == [(2, "song2")]
+
+    def test_delete_non_head_does_not_notify(self, queue_manager):
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1", user_id=1)
+        queue_manager.enqueue("/songs/song2---def.mp4", "User2", user_id=2)
+        captured = self._captured(queue_manager)
+
+        queue_manager.queue_edit("/songs/song2---def.mp4", "delete")
+
+        assert captured == []
+
+    def test_queue_clear_resets_tracking_for_next_song(self, queue_manager):
+        """After a clear, re-enqueuing the same song as head should notify again."""
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1", user_id=1)
+        queue_manager.queue_clear()
+        captured = self._captured(queue_manager)
+
+        queue_manager.enqueue("/songs/song1---abc.mp4", "User1", user_id=1)
+
+        assert captured == [(1, "song1")]

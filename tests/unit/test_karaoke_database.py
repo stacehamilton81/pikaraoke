@@ -199,3 +199,77 @@ class TestUnicodeFilenames:
         path = "/songs/Céline Dion - My Heart---abc1234567x.mp4"
         db.insert_songs([{"file_path": path, "youtube_id": "abc1234567x", "format": "mp4"}])
         assert db.get_all_song_paths() == [path]
+
+
+class TestPlayCount:
+    def test_new_song_has_zero_play_count(self, db):
+        db.insert_songs([{"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"}])
+        assert db.get_play_counts(["/songs/a.mp4"]) == {"/songs/a.mp4": 0}
+
+    def test_increment_play_count(self, db):
+        db.insert_songs([{"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"}])
+        db.increment_play_count("/songs/a.mp4")
+        db.increment_play_count("/songs/a.mp4")
+        assert db.get_play_counts(["/songs/a.mp4"]) == {"/songs/a.mp4": 2}
+
+    def test_increment_unknown_path_is_a_noop(self, db):
+        # Should not raise even if the file_path has no matching row.
+        db.increment_play_count("/songs/does-not-exist.mp4")
+
+    def test_get_play_counts_only_returns_requested_paths(self, db):
+        db.insert_songs(
+            [
+                {"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"},
+                {"file_path": "/songs/b.mp4", "youtube_id": None, "format": "mp4"},
+            ]
+        )
+        db.increment_play_count("/songs/a.mp4")
+        db.increment_play_count("/songs/b.mp4")
+        assert db.get_play_counts(["/songs/a.mp4"]) == {"/songs/a.mp4": 1}
+
+    def test_get_play_counts_empty_input_returns_empty_dict(self, db):
+        assert db.get_play_counts([]) == {}
+
+
+class TestSchemaMigration:
+    def test_adds_play_count_column_to_pre_existing_songs_table(self, tmp_path):
+        """A DB created before play_count existed should get it added via ALTER TABLE."""
+        db_path = str(tmp_path / "legacy.db")
+
+        # Simulate a pre-migration DB: songs table without play_count/last_played_at.
+        import sqlite3
+
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            """
+            CREATE TABLE songs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_path TEXT UNIQUE NOT NULL,
+                youtube_id TEXT,
+                format TEXT NOT NULL,
+                artist TEXT,
+                title TEXT,
+                variant TEXT,
+                year INTEGER,
+                genre TEXT,
+                metadata_status TEXT DEFAULT 'pending',
+                enrichment_attempts INTEGER DEFAULT 0,
+                last_enrichment_attempt TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute("INSERT INTO songs (file_path, format) VALUES ('/songs/old.mp4', 'mp4')")
+        conn.commit()
+        conn.close()
+
+        db = KaraokeDatabase(db_path)
+        try:
+            # Pre-existing row survives migration with a default play_count.
+            assert db.get_play_counts(["/songs/old.mp4"]) == {"/songs/old.mp4": 0}
+            # New column is usable going forward.
+            db.increment_play_count("/songs/old.mp4")
+            assert db.get_play_counts(["/songs/old.mp4"]) == {"/songs/old.mp4": 1}
+        finally:
+            db.close()

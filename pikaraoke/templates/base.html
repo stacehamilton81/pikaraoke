@@ -40,7 +40,9 @@
       // {# MSG: Confirmation dialog when expanding the filesystem on Raspberry Pi, which triggers a reboot. #}
       confirmExpandFilesystem: '{{ _("Are you sure you want to expand the filesystem? This will reboot your raspberry pi.") }}',
       // {# MSG: Generic error prefix shown before an error message. #}
-      errorLabel: '{{ _("Error") }}'
+      errorLabel: '{{ _("Error") }}',
+      // {# MSG: Toast shown to a singer when their song is about to play next. SONG_TITLE is replaced with the title. #}
+      upNextMessage: '{{ _("You\'re up next: SONG_TITLE") }}'
     };
 
     function generateRandomString(length) {
@@ -77,6 +79,10 @@
       window.socket.on('disconnect', function() {
           console.log('Socket disconnected');
       });
+      window.socket.on('singer_up_next', function(data) {
+          var msg = window.translations.upNextMessage.replace('SONG_TITLE', data.title);
+          showNotification(msg, 'is-warning', 6000);
+      });
     }
 
 
@@ -107,6 +113,9 @@
       } catch(e) {}
       $("#current-user span").text(name);
       $("#current-user").removeClass("is-hidden");
+      // Re-join the socket room now that identity is known (handles the
+      // first-time picker flow, which happens after the socket already connected).
+      if (window.socket) { window.socket.emit('identify'); }
     }
 
     function clearUserIdentity() {

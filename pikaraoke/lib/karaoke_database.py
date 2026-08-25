@@ -22,6 +22,8 @@ CREATE TABLE IF NOT EXISTS songs (
     metadata_status TEXT DEFAULT 'pending',
     enrichment_attempts INTEGER DEFAULT 0,
     last_enrichment_attempt TEXT,
+    play_count INTEGER NOT NULL DEFAULT 0,
+    last_played_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -81,8 +83,27 @@ class KaraokeDatabase:
 
     def _create_schema(self) -> None:
         self._conn.executescript(_SCHEMA)
+        self._migrate_schema()
         with self._conn:
             self._conn.execute("PRAGMA user_version = 1")
+
+    def _migrate_schema(self) -> None:
+        """Add columns to pre-existing songs tables that predate them.
+
+        CREATE TABLE IF NOT EXISTS does not retrofit columns onto an
+        already-existing table, so new songs columns need an explicit
+        ALTER TABLE guarded by a check for whether they're already present.
+        """
+        existing_columns = {
+            row["name"] for row in self._conn.execute("PRAGMA table_info(songs)").fetchall()
+        }
+        with self._conn:
+            if "play_count" not in existing_columns:
+                self._conn.execute(
+                    "ALTER TABLE songs ADD COLUMN play_count INTEGER NOT NULL DEFAULT 0"
+                )
+            if "last_played_at" not in existing_columns:
+                self._conn.execute("ALTER TABLE songs ADD COLUMN last_played_at TEXT")
 
     # ------------------------------------------------------------------
     # Read operations
@@ -98,6 +119,18 @@ class KaraokeDatabase:
         """Return the total number of songs in the library."""
         with self._lock:
             return self._conn.execute("SELECT COUNT(*) FROM songs").fetchone()[0]
+
+    def get_play_counts(self, file_paths: list[str]) -> dict[str, int]:
+        """Return {file_path: play_count} for the given paths (0 if never played)."""
+        if not file_paths:
+            return {}
+        with self._lock:
+            placeholders = ",".join("?" * len(file_paths))
+            rows = self._conn.execute(
+                f"SELECT file_path, play_count FROM songs WHERE file_path IN ({placeholders})",
+                file_paths,
+            ).fetchall()
+            return {row["file_path"]: row["play_count"] for row in rows}
 
     # ------------------------------------------------------------------
     # Batch write operations (used by LibraryScanner)
@@ -173,6 +206,15 @@ class KaraokeDatabase:
         """Update a single song's file path (UI-triggered rename)."""
         self.update_paths([(old_path, new_path)])
 
+    def increment_play_count(self, file_path: str) -> None:
+        """Increment a song's play count and record when it was last played."""
+        with self._lock, self._conn:
+            self._conn.execute(
+                "UPDATE songs SET play_count = play_count + 1, "
+                "last_played_at = CURRENT_TIMESTAMP WHERE file_path = ?",
+                (file_path,),
+            )
+
     # ------------------------------------------------------------------
     # Metadata (app-level key-value store)
     # ------------------------------------------------------------------
@@ -216,9 +258,7 @@ class KaraokeDatabase:
     def create_user(self, username: str) -> dict:
         """Insert a user (or return existing) and return {id, username}."""
         with self._lock, self._conn:
-            self._conn.execute(
-                "INSERT OR IGNORE INTO users (username) VALUES (?)", (username,)
-            )
+            self._conn.execute("INSERT OR IGNORE INTO users (username) VALUES (?)", (username,))
             row = self._conn.execute(
                 "SELECT id, username FROM users WHERE username = ? COLLATE NOCASE", (username,)
             ).fetchone()

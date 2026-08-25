@@ -67,6 +67,42 @@ class TestQueueRoutes:
         assert json.loads(response.data)["success"] is False
 
 
+class TestEnqueueUserIdThreading:
+    """The identified user's DB id must reach QueueManager.enqueue for up-next targeting."""
+
+    @patch("pikaraoke.routes.queue.get_current_user_id", return_value=42)
+    @patch("pikaraoke.routes.queue.broadcast_event")
+    @patch("pikaraoke.routes.queue.get_karaoke_instance")
+    def test_enqueue_get_passes_user_id(
+        self, mock_get_instance, mock_broadcast, mock_get_user_id, client
+    ):
+        mock_karaoke = MagicMock()
+        mock_karaoke.queue_manager.enqueue.return_value = [True, "ok"]
+        mock_get_instance.return_value = mock_karaoke
+
+        client.get("/enqueue?song=/songs/test.mp4&user=Alice")
+
+        mock_karaoke.queue_manager.enqueue.assert_called_once_with(
+            "/songs/test.mp4", "Alice", user_id=42
+        )
+
+    @patch("pikaraoke.routes.queue.get_current_user_id", return_value=None)
+    @patch("pikaraoke.routes.queue.broadcast_event")
+    @patch("pikaraoke.routes.queue.get_karaoke_instance")
+    def test_enqueue_get_passes_none_when_unidentified(
+        self, mock_get_instance, mock_broadcast, mock_get_user_id, client
+    ):
+        mock_karaoke = MagicMock()
+        mock_karaoke.queue_manager.enqueue.return_value = [True, "ok"]
+        mock_get_instance.return_value = mock_karaoke
+
+        client.get("/enqueue?song=/songs/test.mp4&user=Alice")
+
+        mock_karaoke.queue_manager.enqueue.assert_called_once_with(
+            "/songs/test.mp4", "Alice", user_id=None
+        )
+
+
 class TestQueueApiContract:
     """Tests that verify the queue API returns expected data structure.
 

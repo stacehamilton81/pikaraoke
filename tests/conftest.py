@@ -99,6 +99,16 @@ class MockKaraoke:
         )
         self.events.on("now_playing_update", self.update_now_playing_socket)
         self.events.on("skip_requested", lambda: self.playback_controller.skip(False))
+        self.events.on(
+            "singer_up_next",
+            lambda user_id, title: (
+                self._socketio.emit(
+                    "singer_up_next", {"title": title}, room=f"user_{user_id}", namespace="/"
+                )
+                if self._socketio
+                else None
+            ),
+        )
 
         # Initialize queue manager
         self.queue_manager = QueueManager(

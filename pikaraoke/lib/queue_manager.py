@@ -33,6 +33,7 @@ class QueueManager:
         self._get_now_playing_user = get_now_playing_user
         self._filename_from_path = filename_from_path
         self._get_available_songs = get_available_songs
+        self._last_up_next_file: str | None = None
 
     def is_song_in_queue(self, song_path: str) -> bool:
         """Check if a song is already in the queue."""
@@ -55,6 +56,20 @@ class QueueManager:
         if self._filename_from_path:
             return self._filename_from_path(song_path, True)
         return song_path
+
+    def _notify_if_up_next_changed(self) -> None:
+        """Emit singer_up_next when a different song becomes first in queue.
+
+        The queue only holds not-yet-playing songs, so index 0 is always
+        the song that will play immediately after the current one ends.
+        """
+        head = self.queue[0] if self.queue else None
+        head_file = head["file"] if head else None
+        if head_file == self._last_up_next_file:
+            return
+        self._last_up_next_file = head_file
+        if head and head.get("user_id"):
+            self._events.emit("singer_up_next", head["user_id"], head["title"])
 
     def _find_song_index(self, song_path: str) -> int:
         """Find a song's index in the queue by exact path match. Returns -1 if not found."""
@@ -100,6 +115,7 @@ class QueueManager:
         semitones: int = 0,
         add_to_front: bool = False,
         log_action: bool = True,
+        user_id: int | None = None,
     ) -> list[bool | str]:
         """Add a song to the queue. Returns [success, message]."""
         title = self._resolve_title(song_path)
@@ -124,6 +140,7 @@ class QueueManager:
             "file": song_path,
             "title": title,
             "semitones": semitones,
+            "user_id": user_id,
         }
         if add_to_front:
             # MSG: Message shown after the song is added to the top of the queue
@@ -146,6 +163,7 @@ class QueueManager:
                 self.queue.insert(insert_pos, queue_item)
             else:
                 self.queue.append(queue_item)
+        self._notify_if_up_next_changed()
         self._events.emit("queue_update")
         self._events.emit("now_playing_update")
         return [
@@ -193,6 +211,7 @@ class QueueManager:
         # MSG: Message shown after the queue is cleared
         self._events.emit("notification", _("Clear queue"), "danger")
         self.queue = []
+        self._last_up_next_file = None
         self._events.emit("queue_update")
         self._events.emit("now_playing_update")
         self._events.emit("skip_requested")
@@ -211,6 +230,7 @@ class QueueManager:
         item = self.queue.pop(old_index)
         self.queue.insert(new_index, item)
         logging.info(f"Reordered queue: moved index {old_index} to {new_index}")
+        self._notify_if_up_next_changed()
         self._events.emit("queue_update")
         self._events.emit("now_playing_update")
         return True
@@ -250,6 +270,7 @@ class QueueManager:
 
         song = self.queue.pop(0)
         logging.info(f"Popped song from queue: {song['title']}")
+        self._notify_if_up_next_changed()
         return song
 
     def queue_edit(self, song_path: str, action: str) -> bool:
@@ -274,6 +295,7 @@ class QueueManager:
         if action == "delete":
             logging.info("Deleting song from queue: " + song_path)
             del self.queue[index]
+            self._notify_if_up_next_changed()
             self._events.emit("queue_update")
             self._events.emit("now_playing_update")
             return True

@@ -238,6 +238,16 @@ class Karaoke:
         self.events.on("skip_requested", lambda: self.playback_controller.skip(False))
         self.events.on("song_downloaded", self.song_manager.register_download)
         self.events.on(
+            "singer_up_next",
+            lambda user_id, title: (
+                self.socketio.emit(
+                    "singer_up_next", {"title": title}, room=f"user_{user_id}", namespace="/"
+                )
+                if self.socketio
+                else None
+            ),
+        )
+        self.events.on(
             "sync_started",
             lambda: self.socketio.emit("sync_started", namespace="/") if self.socketio else None,
         )
@@ -578,7 +588,9 @@ class Karaoke:
                         song["file"], song["user"], song["semitones"]
                     )
 
-                    if not result.success and result.error:
+                    if result.success:
+                        self.db.increment_play_count(song["file"])
+                    elif result.error:
                         self.log_and_send(result.error, "danger")
 
                 self.playback_controller.log_output()

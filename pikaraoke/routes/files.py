@@ -13,7 +13,12 @@ from flask_paginate import Pagination, get_page_parameter
 from flask_smorest import Blueprint
 from marshmallow import Schema, fields
 
-from pikaraoke.lib.current_app import get_karaoke_instance, get_site_name, is_admin
+from pikaraoke.lib.current_app import (
+    get_current_user_id,
+    get_karaoke_instance,
+    get_site_name,
+    is_admin,
+)
 from pikaraoke.lib.metadata_parser import youtube_id_suffix
 
 _ = flask_babel.gettext
@@ -102,10 +107,13 @@ def browse():
     )
     start_index = (page - 1) * results_per_page
 
-    user_id_raw = request.cookies.get("pikaraoke_user_id")
+    user_id = get_current_user_id()
     favorite_paths: set[str] = set()
-    if user_id_raw and user_id_raw.isdigit():
-        favorite_paths = set(k.db.get_favorites(int(user_id_raw)))
+    if user_id:
+        favorite_paths = set(k.db.get_favorites(user_id))
+
+    page_songs = songs[start_index : start_index + results_per_page]
+    play_counts = k.db.get_play_counts(page_songs)
 
     return render_template(
         "files.html",
@@ -115,10 +123,11 @@ def browse():
         letter=letter,
         # MSG: Title of the files page.
         title=_("Browse"),
-        songs=songs[start_index : start_index + results_per_page],
+        songs=page_songs,
         admin=is_admin(),
         current_url=current_url,
         favorite_paths=favorite_paths,
+        play_counts=play_counts,
     )
 
 

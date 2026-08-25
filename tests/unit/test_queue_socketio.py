@@ -102,6 +102,32 @@ class TestQueueSocketEmissions:
         assert "queue_update" in event_names
         assert "now_playing" in event_names
 
+    def test_singer_up_next_targets_that_users_room(self, karaoke_with_socketio):
+        """singer_up_next event emits to the specific user's room, not a broadcast."""
+        k = karaoke_with_socketio
+
+        k.queue_manager.enqueue("/songs/Next Song---dQw4w9WgXcQ.mp4", "User1", user_id=7)
+
+        up_next_calls = [
+            call for call in k.socketio.emit.call_args_list if call[0][0] == "singer_up_next"
+        ]
+        assert len(up_next_calls) == 1
+        args, kwargs = up_next_calls[0]
+        assert args[1] == {"title": "Next Song"}
+        assert kwargs["room"] == "user_7"
+        assert kwargs["namespace"] == "/"
+
+    def test_singer_up_next_not_emitted_without_user_id(self, karaoke_with_socketio):
+        """No singer_up_next emission when the queued song has no identified user."""
+        k = karaoke_with_socketio
+
+        k.queue_manager.enqueue("/songs/song1---abc.mp4", "User1")
+
+        up_next_calls = [
+            call for call in k.socketio.emit.call_args_list if call[0][0] == "singer_up_next"
+        ]
+        assert up_next_calls == []
+
     def test_queue_clear_triggers_socket_updates(self, karaoke_with_socketio):
         """queue_clear triggers both queue_update and now_playing events."""
         k = karaoke_with_socketio

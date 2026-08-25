@@ -9,7 +9,11 @@ from flask import render_template, request
 from flask_smorest import Blueprint
 from marshmallow import Schema, fields
 
-from pikaraoke.lib.current_app import get_karaoke_instance, get_site_name
+from pikaraoke.lib.current_app import (
+    get_current_user_id,
+    get_karaoke_instance,
+    get_site_name,
+)
 
 _ = flask_babel.gettext
 
@@ -18,13 +22,6 @@ users_bp = Blueprint("users", __name__)
 
 class CreateUserForm(Schema):
     username = fields.String(required=True, metadata={"description": "Display name for the user"})
-
-
-def _get_user_id() -> int | None:
-    raw = request.cookies.get("pikaraoke_user_id")
-    if raw and raw.isdigit():
-        return int(raw)
-    return None
 
 
 @users_bp.route("/users", methods=["GET"])
@@ -51,7 +48,7 @@ def favorites_page():
     """My Favorites page."""
     k = get_karaoke_instance()
     site_name = get_site_name()
-    user_id = _get_user_id()
+    user_id = get_current_user_id()
     user = k.db.get_user_by_id(user_id) if user_id else None
     favorites: list[str] = []
     if user_id:
@@ -69,7 +66,7 @@ def favorites_page():
 def get_favorites():
     """Return the current user's favorited file paths as JSON."""
     k = get_karaoke_instance()
-    user_id = _get_user_id()
+    user_id = get_current_user_id()
     if not user_id:
         return json.dumps([])
     return json.dumps(k.db.get_favorites(user_id))
@@ -79,7 +76,7 @@ def get_favorites():
 def add_favorite():
     """Add a song to the current user's favorites."""
     k = get_karaoke_instance()
-    user_id = _get_user_id()
+    user_id = get_current_user_id()
     if not user_id:
         return json.dumps({"success": False, "error": "No user identified"}), 401
     data = request.get_json(silent=True) or {}
@@ -94,7 +91,7 @@ def add_favorite():
 def remove_favorite():
     """Remove a song from the current user's favorites."""
     k = get_karaoke_instance()
-    user_id = _get_user_id()
+    user_id = get_current_user_id()
     if not user_id:
         return json.dumps({"success": False, "error": "No user identified"}), 401
     data = request.get_json(silent=True) or {}

@@ -28,6 +28,18 @@ def is_admin() -> bool:
     return password is None or request.cookies.get("admin") == password
 
 
+def get_current_user_id() -> int | None:
+    """Get the current request's identified user ID from the pikaraoke_user_id cookie.
+
+    Returns:
+        The user ID if the cookie is present and valid, None otherwise.
+    """
+    raw = request.cookies.get("pikaraoke_user_id")
+    if raw and raw.isdigit():
+        return int(raw)
+    return None
+
+
 def get_karaoke_instance() -> Karaoke:
     """Get the current app's Karaoke instance
     This function returns the Karaoke instance stored in the current app's configuration.
