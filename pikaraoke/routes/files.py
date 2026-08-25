@@ -74,10 +74,15 @@ def browse():
                     result.append(song)
         available_songs = result
 
-    if request.args.get("sort") == "date":
+    sort = request.args.get("sort")
+    if sort == "date":
         songs = sorted(available_songs, key=lambda x: os.path.getmtime(x))
         songs.reverse()
         sort_order = "Date"
+    elif sort == "popularity":
+        all_play_counts = k.db.get_play_counts(available_songs)
+        songs = sorted(available_songs, key=lambda x: all_play_counts.get(x, 0), reverse=True)
+        sort_order = "Popularity"
     else:
         songs = available_songs
         sort_order = "Alphabetical"

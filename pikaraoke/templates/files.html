@@ -115,12 +115,30 @@
 		<a href="{{ url_for('files.browse') }}?sort=date">
 			{# MSG: Button which changes how the songs are sorted so they become sorted by date. #} {% trans %}Sort by
 			Date{% endtrans %}
+		</a> |
+		<a href="{{ url_for('files.browse') }}?sort=popularity">
+			{# MSG: Button which changes how the songs are sorted so they become sorted by play count. #} {% trans %}Sort
+			by Popularity{% endtrans %}
 		</a>
 		{% endif %} {% if sort_order == "Date" %} {# MSG: Label which displays that the songs are currently sorted by
 		date. #} {% trans %}Sorted by date{% endtrans %} |
 		<a href="{{ url_for('files.browse') }}">
 			{# MSG: Button which changes how the songs are sorted so they become sorted by name. #} {% trans %}Sort by
 			Alphabetical{% endtrans %}
+		</a> |
+		<a href="{{ url_for('files.browse') }}?sort=popularity">
+			{# MSG: Button which changes how the songs are sorted so they become sorted by play count. #} {% trans %}Sort
+			by Popularity{% endtrans %}
+		</a>
+		{% endif %} {% if sort_order == "Popularity" %} {# MSG: Label which displays that the songs are currently sorted
+		by play count, most played first. #} {% trans %}Sorted by Popularity{% endtrans %} |
+		<a href="{{ url_for('files.browse') }}">
+			{# MSG: Button which changes how the songs are sorted so they become sorted by name. #} {% trans %}Sort by
+			Alphabetical{% endtrans %}
+		</a> |
+		<a href="{{ url_for('files.browse') }}?sort=date">
+			{# MSG: Button which changes how the songs are sorted so they become sorted by date. #} {% trans %}Sort by
+			Date{% endtrans %}
 		</a>
 		{% endif %}
 	</span>
