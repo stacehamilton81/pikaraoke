@@ -161,7 +161,7 @@ def build_ytdl_download_command(
     file_quality = (
         "bestvideo[ext!=webm][height<=1080]+bestaudio[ext!=webm]/best[ext!=webm]"
         if high_quality
-        else "mp4"
+        else "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best"
     )
     args = [
         "-f",
