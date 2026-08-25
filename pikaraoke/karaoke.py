@@ -211,6 +211,10 @@ class Karaoke:
         self._scanner = LibraryScanner(self.db)
         self._sync_lock = threading.Lock()
 
+        # Currently-showing idle-screen background video, or None during playback
+        # / when the library has no songs with a known YouTube ID.
+        self.current_bg_video: dict | None = None
+
         self.generate_qr_code()
 
         # Set preferred language from command line if provided (persists to config)
@@ -237,6 +241,8 @@ class Karaoke:
         self.events.on("song_ended", self.update_now_playing_socket)
         self.events.on("skip_requested", lambda: self.playback_controller.skip(False))
         self.events.on("song_downloaded", self.song_manager.register_download)
+        self.events.on("playback_started", self._clear_bg_video)
+        self.events.on("song_ended", lambda: self.pick_next_bg_video())
         self.events.on(
             "singer_up_next",
             lambda user_id, title: (
@@ -287,6 +293,8 @@ class Karaoke:
             logging.info("No existing database found, scanning song directory")
             result = self._scanner.scan(self.download_path)
             self._apply_scan_result(result)
+
+        self.pick_next_bg_video()
 
     def _apply_scan_result(self, result: ScanResult) -> None:
         """Update SongList and emit notifications after a scan."""
@@ -552,6 +560,31 @@ class Karaoke:
         """Emit now_playing state change via SocketIO."""
         if self.socketio:
             self.socketio.emit("now_playing", self.get_now_playing(), namespace="/")
+
+    def pick_next_bg_video(self) -> None:
+        """Pick a random library song with a YouTube ID for the idle-screen background.
+
+        Broadcasts the new selection (or None, if the library has no eligible
+        songs) to every connected client so splash screens and the "Add to
+        Queue" button in the navbar stay in sync.
+        """
+        song = self.db.get_random_song_with_youtube_id()
+        if song:
+            self.current_bg_video = {
+                "file_path": song["file_path"],
+                "youtube_id": song["youtube_id"],
+                "title": self.song_manager.display_name_from_path(song["file_path"]),
+            }
+        else:
+            self.current_bg_video = None
+        if self.socketio:
+            self.socketio.emit("bg_video_changed", self.current_bg_video, namespace="/")
+
+    def _clear_bg_video(self) -> None:
+        """Hide the idle-screen background video while a real song plays."""
+        self.current_bg_video = None
+        if self.socketio:
+            self.socketio.emit("bg_video_changed", None, namespace="/")
 
     def run(self) -> None:
         """Main run loop - processes queue and plays songs.

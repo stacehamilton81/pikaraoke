@@ -83,6 +83,7 @@
           var msg = window.translations.upNextMessage.replace('SONG_TITLE', data.title);
           showNotification(msg, 'is-warning', 6000);
       });
+      window.socket.on('bg_video_changed', renderBgVideoWidget);
     }
 
 
@@ -210,8 +211,39 @@
       }
     }
 
+    // Idle-screen background video widget: lets any user queue whatever
+    // YouTube video is currently showing on the TV as background.
+    let currentBgVideo = {{ current_bg_video() | tojson }};
+
+    function renderBgVideoWidget(data) {
+      currentBgVideo = data;
+      var el = $("#bg-video-add");
+      if (data && data.title) {
+        $("#bg-video-title").text(data.title);
+        el.removeClass("is-hidden");
+      } else {
+        el.addClass("is-hidden");
+      }
+    }
+
+    $("#bg-video-add").on("click", function (e) {
+      e.preventDefault();
+      if (!currentBgVideo) return;
+      setUserCookie();
+      var user = Cookies.get("user");
+      $.get("/enqueue?song=" + encodeURIComponent(currentBgVideo.file_path) + "&user=" + encodeURIComponent(user), function (data) {
+        var obj = JSON.parse(data);
+        if (obj.success[0]) {
+          showNotification(obj.success[1], "is-success");
+        } else {
+          showNotification(obj.success[1], "is-danger");
+        }
+      });
+    });
+
     $(function () {
       connectSocket();
+      renderBgVideoWidget(currentBgVideo);
 
       // Show user picker on every load for unidentified devices
       checkAndShowPicker();
@@ -375,6 +407,11 @@
       </div>
       <div class="navbar-menu" id="menu">
         <div class="navbar-end">
+          <a id="bg-video-add" class="navbar-item is-hidden" href="#" title="Add to queue">
+            <i class="icon icon-list-add has-text-success" title="Add to queue"></i>
+            {# MSG: Prefix before the title of the song currently playing as background video, on the button that adds it to the queue. #}
+            <span>{% trans %}Now showing:{% endtrans %} <span id="bg-video-title"></span></span>
+          </a>
           <a id="current-user" class="navbar-item is-hidden" href="#">
             <i class="icon  icon-mic-1" title="Current user"></i>
             <span></span>

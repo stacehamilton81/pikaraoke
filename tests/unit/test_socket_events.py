@@ -1,5 +1,7 @@
 """Tests for Socket.IO connection handling in socket_events.py."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 from flask import Flask
 from flask_socketio import SocketIO
@@ -54,3 +56,31 @@ class TestUserRoomJoin:
 
         received = client.get_received()
         assert any(e["name"] == "singer_up_next" for e in received)
+
+
+class TestBgVideoEnded:
+    """Only the master splash screen may advance the idle background rotation."""
+
+    @patch("pikaraoke.routes.socket_events.get_karaoke_instance")
+    def test_master_splash_advances_rotation(self, mock_get_instance, app, socketio):
+        mock_karaoke = MagicMock()
+        mock_get_instance.return_value = mock_karaoke
+        client = socketio.test_client(app, flask_test_client=app.test_client())
+
+        client.emit("register_splash")  # first connection -> elected master
+        client.emit("bg_video_ended")
+
+        mock_karaoke.pick_next_bg_video.assert_called_once()
+
+    @patch("pikaraoke.routes.socket_events.get_karaoke_instance")
+    def test_slave_splash_does_not_advance_rotation(self, mock_get_instance, app, socketio):
+        mock_karaoke = MagicMock()
+        mock_get_instance.return_value = mock_karaoke
+        master = socketio.test_client(app, flask_test_client=app.test_client())
+        master.emit("register_splash")
+        slave = socketio.test_client(app, flask_test_client=app.test_client())
+        slave.emit("register_splash")  # second connection -> elected slave
+
+        slave.emit("bg_video_ended")
+
+        mock_karaoke.pick_next_bg_video.assert_not_called()

@@ -3,6 +3,7 @@
 import pytest
 
 from pikaraoke.lib.events import EventSystem
+from pikaraoke.lib.karaoke_database import KaraokeDatabase
 from pikaraoke.lib.preference_manager import PreferenceManager
 from pikaraoke.lib.queue_manager import QueueManager
 from pikaraoke.lib.song_manager import SongManager
@@ -68,6 +69,9 @@ class MockSongManager:
 
     filename_from_path = SongManager.filename_from_path
 
+    def display_name_from_path(self, file_path: str, remove_youtube_id: bool = True) -> str:
+        return SongManager.filename_from_path(file_path, remove_youtube_id=remove_youtube_id)
+
 
 class MockKaraoke:
     """Minimal mock of the Karaoke class for testing queue operations.
@@ -87,6 +91,8 @@ class MockKaraoke:
         self.volume = 0.85
         self.running = True
         self.now_playing_notification = None
+        self.db = KaraokeDatabase(str(tmp_path / "test.db"))
+        self.current_bg_video = None
 
         # Set preferences that differ from defaults
         self.preferences.set("enable_fair_queue", True)
@@ -109,6 +115,8 @@ class MockKaraoke:
                 else None
             ),
         )
+        self.events.on("playback_started", self._clear_bg_video)
+        self.events.on("song_ended", lambda: self.pick_next_bg_video())
 
         # Initialize queue manager
         self.queue_manager = QueueManager(
@@ -144,6 +152,8 @@ class MockKaraoke:
     restart = Karaoke.restart
     stop = Karaoke.stop
     reset_now_playing_notification = Karaoke.reset_now_playing_notification
+    pick_next_bg_video = Karaoke.pick_next_bg_video
+    _clear_bg_video = Karaoke._clear_bg_video
 
 
 class MockSongList:

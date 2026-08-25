@@ -91,6 +91,19 @@ def setup_socket_events(socketio):
             # Broadcast position to all other splash screens (slaves)
             socketio.emit("playback_position", position, include_self=False)
 
+    @socketio.on("bg_video_ended")
+    def handle_bg_video_ended() -> None:
+        """Handle the master splash screen's idle-background YouTube video finishing.
+
+        Only the master advances the rotation, mirroring playback_position, so
+        multiple splash screens don't race to pick different next videos.
+        """
+        global master_splash_id
+        sid = request.sid
+        if sid == master_splash_id:
+            k = get_karaoke_instance()
+            k.pick_next_bg_video()
+
     @socketio.on("disconnect")
     def handle_disconnect() -> None:
         """Handle Socket.IO client disconnection and manage splash role handover."""

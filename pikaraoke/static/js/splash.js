@@ -25,6 +25,8 @@ let scoreReviews = {
 let isMaster = false;
 let uiScale = null;
 let clockIntervalId = null;
+let currentBgVideo = PikaraokeConfig.currentBgVideo || null;
+let ytPlayer = null;
 
 // Browser detection
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -183,10 +185,74 @@ const playBGVideo = async (play) => {
   }
 }
 
+// YouTube IFrame Player API: rotates through random library songs (that have
+// a known YouTube ID) as the idle-screen background, replacing the old
+// static bg-video when the library has eligible songs.
+window.onYouTubeIframeAPIReady = function () {
+  ytPlayer = new YT.Player('bg-youtube-player', {
+    playerVars: {
+      autoplay: 0,
+      controls: 0,
+      disablekb: 1,
+      fs: 0,
+      modestbranding: 1,
+      rel: 0,
+      playsinline: 1,
+    },
+    events: {
+      onReady: () => updateBackgroundMediaState(true),
+      onStateChange: (event) => {
+        if (event.data === YT.PlayerState.ENDED && isMaster) {
+          socket.emit("bg_video_ended");
+        }
+      },
+    },
+  });
+};
+
+const playBGYoutube = (play) => {
+  const container = $('#bg-video-container');
+
+  if (play) {
+    if (PikaraokeConfig.disableBgVideo) return;
+    if (!autoplayConfirmed) return;
+    if (!currentBgVideo || !currentBgVideo.youtube_id) return;
+    if (!ytPlayer || typeof ytPlayer.loadVideoById !== 'function') return;
+
+    if (ytPlayer.getVideoData().video_id !== currentBgVideo.youtube_id) {
+      ytPlayer.loadVideoById(currentBgVideo.youtube_id);
+    }
+    // Background video plays at half the normal singing volume.
+    ytPlayer.unMute();
+    ytPlayer.setVolume(Math.round(volume * 100 * 0.5));
+    ytPlayer.playVideo();
+    container.fadeIn(2000);
+  } else {
+    if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+      ytPlayer.pauseVideo();
+    }
+    container.fadeOut(2000);
+  }
+};
+
+// Dispatches to the YouTube rotation when a library song is available,
+// otherwise falls back to the static bg-video file (if configured).
+// Always stops whichever mode isn't the active one.
+const playBackgroundVisual = (play) => {
+  if (currentBgVideo && currentBgVideo.youtube_id) {
+    playBGVideo(false);
+    playBGYoutube(play);
+  } else if (hasBgVideo) {
+    playBGYoutube(false);
+    playBGVideo(play);
+  }
+};
+
 const shouldBackgroundMediaPlay = () => {
   return autoplayConfirmed &&
     !nowPlaying.now_playing &&
-    !nowPlaying.up_next;
+    !nowPlaying.up_next &&
+    !document.hidden;
 };
 
 const updateBackgroundMediaState = (immediate = false) => {
@@ -199,19 +265,19 @@ const updateBackgroundMediaState = (immediate = false) => {
   if (shouldBackgroundMediaPlay()) {
     if (immediate) {
       playBGMusic(true);
-      if (hasBgVideo) playBGVideo(true);
+      playBackgroundVisual(true);
     } else {
       bgMediaResumeTimeout = setTimeout(() => {
         bgMediaResumeTimeout = null;
         if (shouldBackgroundMediaPlay()) {
           playBGMusic(true);
-          if (hasBgVideo) playBGVideo(true);
+          playBackgroundVisual(true);
         }
       }, bgMediaResumeDelay);
     }
   } else {
     playBGMusic(false);
-    playBGVideo(false);
+    playBackgroundVisual(false);
   }
 };
 
@@ -241,7 +307,7 @@ const setupScreensaver = () => {
       if (idleTime >= screensaverTimeoutSeconds) {
         if (screensaver.style.visibility === 'hidden') {
           screensaver.style.visibility = 'visible';
-          playBGVideo(false);
+          playBackgroundVisual(false);
           startScreensaver(); // depends on upstream screensaver.js import
         }
         if (idleTime > screensaverTimeoutSeconds + 36000) idleTime = screensaverTimeoutSeconds;
@@ -255,6 +321,15 @@ const setupScreensaver = () => {
       idleTime++;
     }, 1000)
   }
+}
+
+// Stop streaming the background video (YouTube or static) whenever this
+// tab/window isn't actually visible, so an unattended screen doesn't burn
+// bandwidth in the background.
+const setupVisibilityMediaPause = () => {
+  document.addEventListener("visibilitychange", () => {
+    updateBackgroundMediaState(true);
+  });
 }
 
 const handleNowPlayingUpdate = (np) => {
@@ -628,6 +703,10 @@ const setupSocketEvents = () => {
   socket.on("preferences_update", applyPreferenceUpdate);
   socket.on("preferences_reset", applyPreferencesReset);
   socket.on("score_phrases_update", (phrases) => { scoreReviews = phrases; });
+  socket.on("bg_video_changed", (data) => {
+    currentBgVideo = data;
+    if (shouldBackgroundMediaPlay()) playBackgroundVisual(true);
+  });
 
   socket.on("playback_position", (position) => {
     if (!isMaster) {
@@ -695,6 +774,7 @@ $(function () {
   setupOverlayMenus();
   setupVideoPlayer();
   setupBackgroundMusicPlayer();
+  setupVisibilityMediaPause();
 
   // Handle browser compatibility
   handleUnsupportedBrowser();

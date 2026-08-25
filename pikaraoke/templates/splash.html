@@ -8,6 +8,7 @@
   href="{{  url_for('static', filename='score.css') }}"
 />
 <script src="{{ url_for('static', filename='js/subtitles-octopus.js') }}"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
   // Use this config object to pass data from the jinja2 template to the splash.js code
   const PikaraokeConfig = {
@@ -19,6 +20,7 @@
     showSplashClock: "{{ show_splash_clock }}" == 'True',
     screensaverTimeout: parseInt('{{ screensaver_timeout }}') || 0,
     hideOverlay: "{{ hide_overlay }}" == 'True',
+    currentBgVideo: {{ current_bg_video() | tojson }},
     translations: {
       socketConnectionLost: "{{ _('Connection lost. Is the server still running?') }}",
       unsupportedBrowser: "{{ _('This browser is not fully supported. You may experience streaming issues. Please use Chrome/Safari/Firefox/Edge for best results.') }}",
@@ -110,6 +112,7 @@
   <video id="bg-video" poster="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" disableRemotePlayback playsinline webkit-playsinline muted loop style="object-fit: cover">
     <source id="bg-video-source" type="video/mp4" src="" />
   </video>
+  <div id="bg-youtube-player"></div>
 </div>
 
 <div id="score" style="display: none">
@@ -259,6 +262,14 @@
     z-index: 0;
     width: 100vw;
     height: 100vh;
+  }
+  #bg-youtube-player {
+    width: 100vw;
+    height: 100vh;
+  }
+  #bg-youtube-player iframe {
+    width: 100%;
+    height: 100%;
   }
   video {
     height: 100%;

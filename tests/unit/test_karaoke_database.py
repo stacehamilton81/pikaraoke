@@ -231,6 +231,29 @@ class TestPlayCount:
         assert db.get_play_counts([]) == {}
 
 
+class TestGetRandomSongWithYoutubeId:
+    def test_returns_none_when_no_songs(self, db):
+        assert db.get_random_song_with_youtube_id() is None
+
+    def test_returns_none_when_no_songs_have_youtube_id(self, db):
+        db.insert_songs([{"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"}])
+        assert db.get_random_song_with_youtube_id() is None
+
+    def test_returns_a_song_with_youtube_id(self, db):
+        db.insert_songs(
+            [
+                {"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"},
+                {"file_path": "/songs/b.mp4", "youtube_id": "dQw4w9WgXcQ", "format": "mp4"},
+            ]
+        )
+        result = db.get_random_song_with_youtube_id()
+        assert result == {"file_path": "/songs/b.mp4", "youtube_id": "dQw4w9WgXcQ"}
+
+    def test_ignores_empty_string_youtube_id(self, db):
+        db.insert_songs([{"file_path": "/songs/a.mp4", "youtube_id": "", "format": "mp4"}])
+        assert db.get_random_song_with_youtube_id() is None
+
+
 class TestSchemaMigration:
     def test_adds_play_count_column_to_pre_existing_songs_table(self, tmp_path):
         """A DB created before play_count existed should get it added via ALTER TABLE."""

@@ -120,6 +120,20 @@ class KaraokeDatabase:
         with self._lock:
             return self._conn.execute("SELECT COUNT(*) FROM songs").fetchone()[0]
 
+    def get_random_song_with_youtube_id(self) -> dict | None:
+        """Return a random {file_path, youtube_id} row for a song with a known YouTube ID.
+
+        Used to pick a video for the idle-screen YouTube background rotation.
+        Returns None if the library has no songs with a youtube_id.
+        """
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT file_path, youtube_id FROM songs "
+                "WHERE youtube_id IS NOT NULL AND youtube_id != '' "
+                "ORDER BY RANDOM() LIMIT 1"
+            ).fetchone()
+            return dict(row) if row else None
+
     def get_play_counts(self, file_paths: list[str]) -> dict[str, int]:
         """Return {file_path: play_count} for the given paths (0 if never played)."""
         if not file_paths:
