@@ -57,6 +57,25 @@ class TestBgVideoPlaybackHooks:
         assert k.current_bg_video is None
         k.socketio.emit.assert_called_once_with("bg_video_changed", None, namespace="/")
 
+    def test_set_display_active_true_broadcasts(self, karaoke_with_socketio):
+        k = karaoke_with_socketio
+        k.display_active = False
+        k.socketio.emit.reset_mock()
+
+        k.set_display_active(True)
+
+        assert k.display_active is True
+        k.socketio.emit.assert_called_once_with("display_active_changed", True, namespace="/")
+
+    def test_set_display_active_false_broadcasts(self, karaoke_with_socketio):
+        k = karaoke_with_socketio
+        k.socketio.emit.reset_mock()
+
+        k.set_display_active(False)
+
+        assert k.display_active is False
+        k.socketio.emit.assert_called_once_with("display_active_changed", False, namespace="/")
+
     def test_song_ended_picks_a_new_bg_video(self, karaoke_with_socketio):
         k = karaoke_with_socketio
         k.db.insert_songs(

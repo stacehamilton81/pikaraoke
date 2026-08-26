@@ -27,6 +27,7 @@ let uiScale = null;
 let clockIntervalId = null;
 let splashBgVideo = PikaraokeConfig.splashBgVideo || null;
 let ytPlayer = null;
+let displayActive = PikaraokeConfig.displayActive;
 
 // Browser detection
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -268,7 +269,8 @@ const shouldBackgroundMediaPlay = () => {
   return autoplayConfirmed &&
     !nowPlaying.now_playing &&
     !nowPlaying.up_next &&
-    !document.hidden;
+    !document.hidden &&
+    displayActive;
 };
 
 const updateBackgroundMediaState = (immediate = false) => {
@@ -722,6 +724,10 @@ const setupSocketEvents = () => {
   socket.on("bg_video_changed", (data) => {
     splashBgVideo = data;
     if (shouldBackgroundMediaPlay()) playBackgroundVisual(true);
+  });
+  socket.on("display_active_changed", (active) => {
+    displayActive = active;
+    updateBackgroundMediaState(true);
   });
 
   socket.on("playback_position", (position) => {

@@ -102,3 +102,29 @@ class TestScorePhrasesEndpoint:
         data = response.get_json()
         assert set(data.keys()) == {"low", "mid", "high"}
         assert data["low"] == ["Bad", "Terrible"]
+
+
+class TestDisplayActiveEndpoints:
+    """Tests for GET /display/on and /display/off (e.g. Home Assistant integration)."""
+
+    @patch("pikaraoke.routes.splash.get_karaoke_instance")
+    def test_display_on_activates(self, mock_get_instance, client):
+        mock_karaoke = MagicMock()
+        mock_get_instance.return_value = mock_karaoke
+
+        response = client.get("/display/on")
+
+        assert response.status_code == 200
+        assert response.get_json() == {"success": True, "display_active": True}
+        mock_karaoke.set_display_active.assert_called_once_with(True)
+
+    @patch("pikaraoke.routes.splash.get_karaoke_instance")
+    def test_display_off_deactivates(self, mock_get_instance, client):
+        mock_karaoke = MagicMock()
+        mock_get_instance.return_value = mock_karaoke
+
+        response = client.get("/display/off")
+
+        assert response.status_code == 200
+        assert response.get_json() == {"success": True, "display_active": False}
+        mock_karaoke.set_display_active.assert_called_once_with(False)

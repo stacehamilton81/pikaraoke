@@ -21,6 +21,7 @@
     screensaverTimeout: parseInt('{{ screensaver_timeout }}') || 0,
     hideOverlay: "{{ hide_overlay }}" == 'True',
     splashBgVideo: {{ current_bg_video() | tojson }},
+    displayActive: {{ display_active() | tojson }},
     translations: {
       socketConnectionLost: "{{ _('Connection lost. Is the server still running?') }}",
       unsupportedBrowser: "{{ _('This browser is not fully supported. You may experience streaming issues. Please use Chrome/Safari/Firefox/Edge for best results.') }}",

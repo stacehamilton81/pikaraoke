@@ -93,6 +93,7 @@ class MockKaraoke:
         self.now_playing_notification = None
         self.db = KaraokeDatabase(str(tmp_path / "test.db"))
         self.current_bg_video = None
+        self.display_active = True
 
         # Set preferences that differ from defaults
         self.preferences.set("enable_fair_queue", True)
@@ -154,6 +155,7 @@ class MockKaraoke:
     reset_now_playing_notification = Karaoke.reset_now_playing_notification
     pick_next_bg_video = Karaoke.pick_next_bg_video
     _clear_bg_video = Karaoke._clear_bg_video
+    set_display_active = Karaoke.set_display_active
 
 
 class MockSongList:

@@ -278,6 +278,7 @@ def main() -> None:
     app.jinja_env.globals.update(filename_from_path=k.song_manager.display_name_from_path)
     app.jinja_env.globals.update(url_escape=quote)
     app.jinja_env.globals.update(current_bg_video=lambda: k.current_bg_video)
+    app.jinja_env.globals.update(display_active=lambda: k.display_active)
 
     spawn(upgrade_youtubedl)
 

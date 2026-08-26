@@ -66,6 +66,20 @@ def get_score_phrases():
     return jsonify(_get_active_score_phrases(get_karaoke_instance()))
 
 
+@splash_bp.route("/display/on")
+def display_on():
+    """Mark the physical display as active (e.g. AV receiver switched to this input)."""
+    get_karaoke_instance().set_display_active(True)
+    return jsonify({"success": True, "display_active": True})
+
+
+@splash_bp.route("/display/off")
+def display_off():
+    """Mark the physical display as inactive, pausing the idle background video stream."""
+    get_karaoke_instance().set_display_active(False)
+    return jsonify({"success": True, "display_active": False})
+
+
 @splash_bp.route("/splash")
 def splash():
     """Splash screen / player display for TV output."""
