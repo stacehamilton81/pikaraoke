@@ -206,6 +206,9 @@
     }
 
     function checkAndShowPicker() {
+      // Never prompt for identity on the TV/splash display -- nobody "logs
+      // in" there, and the modal would block the idle background video.
+      if (window.location.pathname === '/splash') return;
       if (!getStoredUserId()) {
         showUserPicker();
       }

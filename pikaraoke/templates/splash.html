@@ -20,7 +20,7 @@
     showSplashClock: "{{ show_splash_clock }}" == 'True',
     screensaverTimeout: parseInt('{{ screensaver_timeout }}') || 0,
     hideOverlay: "{{ hide_overlay }}" == 'True',
-    currentBgVideo: {{ current_bg_video() | tojson }},
+    splashBgVideo: {{ current_bg_video() | tojson }},
     translations: {
       socketConnectionLost: "{{ _('Connection lost. Is the server still running?') }}",
       unsupportedBrowser: "{{ _('This browser is not fully supported. You may experience streaming issues. Please use Chrome/Safari/Firefox/Edge for best results.') }}",
@@ -262,14 +262,19 @@
     z-index: 0;
     width: 100vw;
     height: 100vh;
+    isolation: isolate;
   }
-  #bg-youtube-player {
+  /* The YouTube IFrame API replaces #bg-youtube-player with the actual
+     <iframe> in place, as a direct child of #bg-video-container -- it does
+     NOT nest the iframe inside the original div. */
+  #bg-video-container iframe {
     width: 100vw;
     height: 100vh;
+    border: 0;
+    flex-shrink: 0;
   }
-  #bg-youtube-player iframe {
-    width: 100%;
-    height: 100%;
+  #bg-video-container video {
+    flex-shrink: 0;
   }
   video {
     height: 100%;

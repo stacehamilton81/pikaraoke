@@ -25,7 +25,7 @@ let scoreReviews = {
 let isMaster = false;
 let uiScale = null;
 let clockIntervalId = null;
-let currentBgVideo = PikaraokeConfig.currentBgVideo || null;
+let splashBgVideo = PikaraokeConfig.splashBgVideo || null;
 let ytPlayer = null;
 
 // Browser detection
@@ -172,6 +172,11 @@ const playBGVideo = async (play) => {
     if (PikaraokeConfig.disableBgVideo) return;
     if (!autoplayConfirmed) return;
 
+    // The YouTube iframe (if present) shares this container -- only one of
+    // the two should occupy the flex layout at a time.
+    $('#bg-video-container iframe').hide();
+    $(bgVideo).show();
+
     if (isMediaPlaying(bgVideo)) return;
     $("#bg-video").attr("src", "/stream/bg_video");
     if (bgVideo.readyState <= 2) await bgVideo.load();
@@ -206,6 +211,12 @@ window.onYouTubeIframeAPIReady = function () {
           socket.emit("bg_video_ended");
         }
       },
+      // A library video may have been removed, made private, or had
+      // embedding disabled on YouTube since it was downloaded -- treat
+      // that the same as the video ending, so rotation doesn't get stuck.
+      onError: () => {
+        if (isMaster) socket.emit("bg_video_ended");
+      },
     },
   });
 };
@@ -216,11 +227,16 @@ const playBGYoutube = (play) => {
   if (play) {
     if (PikaraokeConfig.disableBgVideo) return;
     if (!autoplayConfirmed) return;
-    if (!currentBgVideo || !currentBgVideo.youtube_id) return;
+    if (!splashBgVideo || !splashBgVideo.youtube_id) return;
     if (!ytPlayer || typeof ytPlayer.loadVideoById !== 'function') return;
 
-    if (ytPlayer.getVideoData().video_id !== currentBgVideo.youtube_id) {
-      ytPlayer.loadVideoById(currentBgVideo.youtube_id);
+    // The static <video> fallback shares this container -- only one of the
+    // two should occupy the flex layout at a time.
+    $(getBackgroundVideoPlayer()).hide();
+    $('#bg-video-container iframe').show();
+
+    if (ytPlayer.getVideoData().video_id !== splashBgVideo.youtube_id) {
+      ytPlayer.loadVideoById(splashBgVideo.youtube_id);
     }
     // Background video plays at half the normal singing volume.
     ytPlayer.unMute();
@@ -239,7 +255,7 @@ const playBGYoutube = (play) => {
 // otherwise falls back to the static bg-video file (if configured).
 // Always stops whichever mode isn't the active one.
 const playBackgroundVisual = (play) => {
-  if (currentBgVideo && currentBgVideo.youtube_id) {
+  if (splashBgVideo && splashBgVideo.youtube_id) {
     playBGVideo(false);
     playBGYoutube(play);
   } else if (hasBgVideo) {
@@ -704,7 +720,7 @@ const setupSocketEvents = () => {
   socket.on("preferences_reset", applyPreferencesReset);
   socket.on("score_phrases_update", (phrases) => { scoreReviews = phrases; });
   socket.on("bg_video_changed", (data) => {
-    currentBgVideo = data;
+    splashBgVideo = data;
     if (shouldBackgroundMediaPlay()) playBackgroundVisual(true);
   });
 
