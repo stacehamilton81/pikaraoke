@@ -158,6 +158,7 @@ class MockKaraoke:
     _find_official_video_id = Karaoke._find_official_video_id
     _is_video_embeddable = Karaoke._is_video_embeddable
     _NON_OFFICIAL_MARKERS = Karaoke._NON_OFFICIAL_MARKERS
+    BG_VIDEO_PICK_ATTEMPTS = Karaoke.BG_VIDEO_PICK_ATTEMPTS
     set_display_active = Karaoke.set_display_active
 
 

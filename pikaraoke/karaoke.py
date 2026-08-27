@@ -567,32 +567,47 @@ class Karaoke:
         if self.socketio:
             self.socketio.emit("now_playing", self.get_now_playing(), namespace="/")
 
+    BG_VIDEO_PICK_ATTEMPTS = 3
+
     def pick_next_bg_video(self) -> None:
         """Pick a random library song for the idle-screen background.
 
         Shows that song's official YouTube video, not the karaoke version
         the library file itself was downloaded from -- searches YouTube for
-        a non-karaoke match and falls back to the library video's own ID if
-        the search fails or turns up nothing suitable. "Add to Queue" still
-        queues the library's own karaoke file regardless of which video is
-        showing.
+        a non-karaoke match. If nothing suitable turns up, falls back to the
+        library video's own ID, but only after confirming *that* is actually
+        embeddable too (it may have been taken down since it was
+        downloaded -- karaoke uploads get copyright-claimed often). If a
+        song has no embeddable video at all, tries a few different random
+        songs before giving up, rather than settling for one that would show
+        "Video unavailable" on the TV. "Add to Queue" still queues the
+        library's own karaoke file regardless of which video is showing.
 
-        Broadcasts the new selection (or None, if the library has no eligible
-        songs) to every connected client so splash screens and the "Add to
+        Broadcasts the new selection (or None, if nothing eligible was
+        found) to every connected client so splash screens and the "Add to
         Queue" button in the navbar stay in sync.
         """
-        song = self.db.get_random_song_with_youtube_id()
-        if song:
+        for _ in range(self.BG_VIDEO_PICK_ATTEMPTS):
+            song = self.db.get_random_song_with_youtube_id()
+            if not song:
+                break
             title = self.song_manager.display_name_from_path(song["file_path"])
-            self.current_bg_video = {
-                "file_path": song["file_path"],
-                "youtube_id": self._find_official_video_id(title) or song["youtube_id"],
-                "title": title,
-            }
-        else:
-            self.current_bg_video = None
+            youtube_id = self._find_official_video_id(title)
+            if not youtube_id and self._is_video_embeddable(song["youtube_id"]):
+                youtube_id = song["youtube_id"]
+            if youtube_id:
+                self.current_bg_video = {
+                    "file_path": song["file_path"],
+                    "youtube_id": youtube_id,
+                    "title": title,
+                }
+                if self.socketio:
+                    self.socketio.emit("bg_video_changed", self.current_bg_video, namespace="/")
+                return
+
+        self.current_bg_video = None
         if self.socketio:
-            self.socketio.emit("bg_video_changed", self.current_bg_video, namespace="/")
+            self.socketio.emit("bg_video_changed", None, namespace="/")
 
     _NON_OFFICIAL_MARKERS = (
         "karaoke",

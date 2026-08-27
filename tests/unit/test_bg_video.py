@@ -170,9 +170,10 @@ class TestPickNextBgVideo:
             "bg_video_changed", k.current_bg_video, namespace="/"
         )
 
+    @patch("requests.get")
     @patch("pikaraoke.karaoke.get_search_results")
     def test_falls_back_to_library_video_id_when_search_finds_nothing(
-        self, mock_search, karaoke_with_socketio
+        self, mock_search, mock_get, karaoke_with_socketio
     ):
         k = karaoke_with_socketio
         k.db.insert_songs(
@@ -185,10 +186,64 @@ class TestPickNextBgVideo:
             ]
         )
         mock_search.return_value = [["Song (Karaoke)", "url", "karaoke_id", "A", "3:00"]]
+        mock_get.return_value = _ok_response()
 
         k.pick_next_bg_video()
 
         assert k.current_bg_video["youtube_id"] == "dQw4w9WgXcQ"
+
+    @patch("requests.get")
+    @patch("pikaraoke.karaoke.get_search_results")
+    def test_gives_up_after_max_attempts_when_nothing_is_embeddable(
+        self, mock_search, mock_get, karaoke_with_socketio
+    ):
+        """Every candidate for every attempt fails -- broadcast None rather
+        than settling for something that would show "Video unavailable"."""
+        k = karaoke_with_socketio
+        k.db.insert_songs(
+            [
+                {
+                    "file_path": f"/songs/Song{i}---abcdefghij{i}.mp4",
+                    "youtube_id": f"abcdefghij{i}",
+                    "format": "mp4",
+                }
+                for i in range(5)
+            ]
+        )
+        mock_search.return_value = []
+        mock_get.return_value = _fail_response()
+
+        k.pick_next_bg_video()
+
+        assert k.current_bg_video is None
+        assert mock_search.call_count == k.BG_VIDEO_PICK_ATTEMPTS
+        k.socketio.emit.assert_called_once_with("bg_video_changed", None, namespace="/")
+
+    @patch("requests.get")
+    @patch("pikaraoke.karaoke.get_search_results")
+    def test_retries_a_different_song_when_first_pick_is_not_embeddable(
+        self, mock_search, mock_get, karaoke_with_socketio
+    ):
+        """First random song's own video fails validation and search finds
+        nothing -- should try again with a different song rather than give up."""
+        k = karaoke_with_socketio
+        k.db.insert_songs(
+            [
+                {
+                    "file_path": "/songs/OnlyOne---zzzzzzzzzzz.mp4",
+                    "youtube_id": "zzzzzzzzzzz",
+                    "format": "mp4",
+                }
+            ]
+        )
+        mock_search.return_value = []
+        # First attempt fails, second succeeds.
+        mock_get.side_effect = [_fail_response(), _ok_response()]
+
+        k.pick_next_bg_video()
+
+        assert k.current_bg_video["youtube_id"] == "zzzzzzzzzzz"
+        assert mock_search.call_count == 2
 
     def test_broadcasts_none_when_library_has_no_eligible_songs(self, karaoke_with_socketio):
         k = karaoke_with_socketio
@@ -230,8 +285,9 @@ class TestBgVideoPlaybackHooks:
         assert k.display_active is False
         k.socketio.emit.assert_called_once_with("display_active_changed", False, namespace="/")
 
+    @patch("requests.get")
     @patch("pikaraoke.karaoke.get_search_results")
-    def test_song_ended_picks_a_new_bg_video(self, mock_search, karaoke_with_socketio):
+    def test_song_ended_picks_a_new_bg_video(self, mock_search, mock_get, karaoke_with_socketio):
         k = karaoke_with_socketio
         k.db.insert_songs(
             [
@@ -243,6 +299,7 @@ class TestBgVideoPlaybackHooks:
             ]
         )
         mock_search.return_value = []
+        mock_get.return_value = _ok_response()
         k.socketio.emit.reset_mock()
 
         k.events.emit("song_ended")
