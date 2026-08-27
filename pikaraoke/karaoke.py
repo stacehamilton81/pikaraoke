@@ -620,11 +620,17 @@ class Karaoke:
         "backing track",
     )
 
+    # Trailers, teasers, and YouTube Shorts show up in search results too --
+    # skip anything shorter than this so the rotation doesn't end up
+    # advancing every few seconds instead of playing a real song.
+    MIN_OFFICIAL_VIDEO_SECONDS = 60
+
     def _find_official_video_id(self, title: str) -> str | None:
         """Search YouTube for a non-karaoke official video matching this song title.
 
         Returns None if the search fails, finds nothing, or every result
-        still looks like a karaoke/cover version.
+        still looks like a karaoke/cover version or is too short to be
+        the actual song.
         """
         query = clean_search_query(title)
         if not query:
@@ -634,12 +640,33 @@ class Karaoke:
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
             logging.warning(f"Background video search failed for {query!r}: {e}")
             return None
-        for result_title, _url, video_id, _channel, _duration in results:
+        for result_title, _url, video_id, _channel, duration in results:
             if any(marker in result_title.lower() for marker in self._NON_OFFICIAL_MARKERS):
+                continue
+            duration_seconds = self._parse_duration_seconds(duration)
+            if duration_seconds is not None and duration_seconds < self.MIN_OFFICIAL_VIDEO_SECONDS:
                 continue
             if self._is_video_embeddable(video_id):
                 return video_id
         return None
+
+    @staticmethod
+    def _parse_duration_seconds(duration: str) -> int | None:
+        """Parse a "M:SS" or "H:MM:SS" duration string into total seconds.
+
+        Returns None for an empty/unknown duration (never filtered out on
+        that basis alone -- only a *known* short duration is disqualifying).
+        """
+        if not duration:
+            return None
+        try:
+            parts = [int(p) for p in duration.split(":")]
+        except ValueError:
+            return None
+        seconds = 0
+        for part in parts:
+            seconds = seconds * 60 + part
+        return seconds
 
     def _is_video_embeddable(self, youtube_id: str) -> bool:
         """Check via YouTube's oEmbed endpoint whether a video can actually be shown.

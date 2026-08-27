@@ -159,6 +159,8 @@ class MockKaraoke:
     _is_video_embeddable = Karaoke._is_video_embeddable
     _NON_OFFICIAL_MARKERS = Karaoke._NON_OFFICIAL_MARKERS
     BG_VIDEO_PICK_ATTEMPTS = Karaoke.BG_VIDEO_PICK_ATTEMPTS
+    MIN_OFFICIAL_VIDEO_SECONDS = Karaoke.MIN_OFFICIAL_VIDEO_SECONDS
+    _parse_duration_seconds = staticmethod(Karaoke._parse_duration_seconds)
     set_display_active = Karaoke.set_display_active
 
 

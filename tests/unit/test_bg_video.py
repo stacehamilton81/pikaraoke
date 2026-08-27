@@ -51,6 +51,26 @@ class TestIsVideoEmbeddable:
         assert karaoke_with_socketio._is_video_embeddable("abc123") is False
 
 
+class TestParseDurationSeconds:
+    """Tests for _parse_duration_seconds."""
+
+    @pytest.mark.parametrize(
+        "duration,expected",
+        [
+            ("3:15", 195),
+            ("0:45", 45),
+            ("1:02:30", 3750),
+            ("0:05", 5),
+        ],
+    )
+    def test_parses_valid_durations(self, duration, expected, karaoke_with_socketio):
+        assert karaoke_with_socketio._parse_duration_seconds(duration) == expected
+
+    @pytest.mark.parametrize("duration", ["", None, "garbage", "1:xx"])
+    def test_returns_none_for_empty_or_invalid(self, duration, karaoke_with_socketio):
+        assert karaoke_with_socketio._parse_duration_seconds(duration) is None
+
+
 class TestFindOfficialVideoId:
     """Tests for _find_official_video_id: prefer a real official video over
     whatever karaoke/cover version the library file itself was downloaded from."""
@@ -82,6 +102,36 @@ class TestFindOfficialVideoId:
         result = karaoke_with_socketio._find_official_video_id("Song Title")
 
         assert result == "clean_id"
+
+    @patch("requests.get")
+    @patch("pikaraoke.karaoke.get_search_results")
+    def test_skips_short_clips_like_trailers_and_shorts(
+        self, mock_search, mock_get, karaoke_with_socketio
+    ):
+        """A sub-60s result (trailer/teaser/Short) shouldn't be picked -- it
+        would end almost immediately and make the rotation churn rapidly."""
+        mock_search.return_value = [
+            ["Song Title (Official Video Teaser)", "url1", "teaser_id", "Channel", "0:15"],
+            ["Song Title (Official Video)", "url2", "full_id", "Artist", "3:20"],
+        ]
+        mock_get.return_value = _ok_response()
+
+        result = karaoke_with_socketio._find_official_video_id("Song Title")
+
+        assert result == "full_id"
+
+    @patch("requests.get")
+    @patch("pikaraoke.karaoke.get_search_results")
+    def test_accepts_unknown_duration(self, mock_search, mock_get, karaoke_with_socketio):
+        """An empty/unparseable duration isn't disqualifying on its own."""
+        mock_search.return_value = [
+            ["Song Title (Official Video)", "url1", "unknown_dur_id", "Channel", ""],
+        ]
+        mock_get.return_value = _ok_response()
+
+        result = karaoke_with_socketio._find_official_video_id("Song Title")
+
+        assert result == "unknown_dur_id"
 
     @patch("requests.get")
     @patch("pikaraoke.karaoke.get_search_results")
