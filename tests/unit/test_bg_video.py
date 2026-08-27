@@ -6,6 +6,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
+from pikaraoke.lib.preference_manager import PreferenceManager
+
 
 @pytest.fixture
 def karaoke_with_socketio(mock_karaoke):
@@ -284,6 +286,18 @@ class TestBgVideoPlaybackHooks:
 
         assert k.display_active is False
         k.socketio.emit.assert_called_once_with("display_active_changed", False, namespace="/")
+
+    def test_set_display_active_persists_across_restart(self, karaoke_with_socketio):
+        """A restart must not silently override what an external system (e.g.
+        Home Assistant) explicitly set -- this is the actual bug being fixed."""
+        k = karaoke_with_socketio
+
+        k.set_display_active(False)
+
+        # Simulate a fresh process reading the same config file from scratch,
+        # the way Karaoke.__init__ -> _load_preferences -> apply_all does.
+        restarted_prefs = PreferenceManager(config_file_path=k.preferences.config_file_path)
+        assert restarted_prefs.get_or_default("display_active") is False
 
     @patch("requests.get")
     @patch("pikaraoke.karaoke.get_search_results")

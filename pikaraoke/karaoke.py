@@ -216,10 +216,11 @@ class Karaoke:
         # / when the library has no songs with a known YouTube ID.
         self.current_bg_video: dict | None = None
 
-        # Whether the physical display is actually showing pikaraoke right now
-        # (e.g. an AV receiver's HDMI input has been switched elsewhere).
-        # True by default -- only false when something explicitly says otherwise.
-        self.display_active: bool = True
+        # self.display_active (whether the physical display is actually showing
+        # pikaraoke right now, e.g. an AV receiver's HDMI input switched
+        # elsewhere) is preference-backed -- loaded by _load_preferences()
+        # above so it persists across restarts instead of silently resetting
+        # to "on" and overriding whatever an external system had set it to.
 
         self.generate_qr_code()
 
@@ -678,8 +679,13 @@ class Karaoke:
         Lets an external system (e.g. a Home Assistant automation tied to an
         AV receiver's HDMI input) tell splash screens to stop/resume
         streaming the idle background video when nobody can see it.
+
+        Persisted (not just an in-memory flag) so a pikaraoke restart -- an
+        update, a crash, anything -- doesn't silently reset this back to
+        "on" and override what the external system had explicitly set.
+        preferences.set() also syncs self.display_active immediately.
         """
-        self.display_active = active
+        self.preferences.set("display_active", active)
         if self.socketio:
             self.socketio.emit("display_active_changed", active, namespace="/")
 
