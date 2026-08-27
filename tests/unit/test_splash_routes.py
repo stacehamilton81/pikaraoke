@@ -104,6 +104,21 @@ class TestScorePhrasesEndpoint:
         assert data["low"] == ["Bad", "Terrible"]
 
 
+class TestSkipBgVideoEndpoint:
+    """Tests for GET /bg_video/skip."""
+
+    @patch("pikaraoke.routes.splash.get_karaoke_instance")
+    def test_skip_picks_a_new_video(self, mock_get_instance, client):
+        mock_karaoke = MagicMock()
+        mock_get_instance.return_value = mock_karaoke
+
+        response = client.get("/bg_video/skip")
+
+        assert response.status_code == 200
+        assert response.get_json() == {"success": True}
+        mock_karaoke.pick_next_bg_video.assert_called_once()
+
+
 class TestDisplayActiveEndpoints:
     """Tests for GET /display/on and /display/off (e.g. Home Assistant integration)."""
 

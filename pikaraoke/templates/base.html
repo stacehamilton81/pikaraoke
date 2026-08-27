@@ -240,9 +240,9 @@
     }
 
     // Delegated (not direct) binding: this script runs in <head>, before
-    // #bg-video-add exists in the DOM, so a direct $("#bg-video-add").on(...)
-    // binds to an empty selection and silently does nothing.
-    $(document).on("click", "#bg-video-add", function (e) {
+    // these elements exist in the DOM, so a direct $(...).on(...) binds to
+    // an empty selection and silently does nothing.
+    $(document).on("click", "#bg-video-queue-btn", function (e) {
       e.preventDefault();
       if (!currentBgVideo) return;
       setUserCookie();
@@ -255,6 +255,11 @@
           showNotification(obj.success[1], "is-danger");
         }
       });
+    });
+
+    $(document).on("click", "#bg-video-skip-btn", function (e) {
+      e.preventDefault();
+      $.get("/bg_video/skip");
     });
 
     $(function () {
@@ -366,7 +371,6 @@
     padding: 4px 10px;
     background-color: rgba(0, 0, 0, 0.75);
     color: #48c78e;
-    text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
   }
@@ -374,6 +378,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  #bg-video-add a {
+    text-decoration: none;
+    flex-shrink: 0;
   }
   tr:nth-child(even) {
     background-color: rgb(50, 55, 55);
@@ -451,13 +459,18 @@
       </div>
     </nav>
 
-    <!-- Fixed, always-visible regardless of the collapsed mobile navbar-menu,
-         so it's usable without tapping the hamburger first. -->
-    <a id="bg-video-add" class="is-hidden" href="#" title="Add to queue">
-      <i class="icon icon-list-add has-text-success" title="Add to queue"></i>
-      {# MSG: Prefix before the title of the song currently playing as background video, on the button that adds it to the queue. #}
+    <!-- Home page only; lives outside .navbar-menu so it isn't hidden
+         behind the collapsed mobile hamburger menu. -->
+    <div id="bg-video-add" class="is-hidden">
+      {# MSG: Prefix before the title of the song currently playing as background video. #}
       <span>{% trans %}Now showing:{% endtrans %} <span id="bg-video-title"></span></span>
-    </a>
+      <a href="#" id="bg-video-queue-btn" title="Add to queue">
+        <i class="icon icon-list-add has-text-success"></i>
+      </a>
+      <a href="#" id="bg-video-skip-btn" title="Skip">
+        <i class="icon icon-to-end has-text-warning"></i>
+      </a>
+    </div>
 
     {% if get_flashed_messages() %}
     {% for category, message in get_flashed_messages(with_categories=true) %}

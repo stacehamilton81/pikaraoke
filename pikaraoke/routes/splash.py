@@ -66,6 +66,13 @@ def get_score_phrases():
     return jsonify(_get_active_score_phrases(get_karaoke_instance()))
 
 
+@splash_bp.route("/bg_video/skip")
+def skip_bg_video():
+    """Skip to a different random idle-screen background video."""
+    get_karaoke_instance().pick_next_bg_video()
+    return jsonify({"success": True})
+
+
 @splash_bp.route("/display/on")
 def display_on():
     """Mark the physical display as active (e.g. AV receiver switched to this input)."""
