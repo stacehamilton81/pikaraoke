@@ -619,9 +619,37 @@ class Karaoke:
             logging.warning(f"Background video search failed for {query!r}: {e}")
             return None
         for result_title, _url, video_id, _channel, _duration in results:
-            if not any(marker in result_title.lower() for marker in self._NON_OFFICIAL_MARKERS):
+            if any(marker in result_title.lower() for marker in self._NON_OFFICIAL_MARKERS):
+                continue
+            if self._is_video_embeddable(video_id):
                 return video_id
         return None
+
+    def _is_video_embeddable(self, youtube_id: str) -> bool:
+        """Check via YouTube's oEmbed endpoint whether a video can actually be shown.
+
+        Catches videos that are private, deleted, region-locked, or have
+        embedding disabled -- oEmbed fails for all of these -- before
+        picking one that would show "Video unavailable" on the TV.
+        """
+        # Imported locally (not at module level) so it's not pulled in
+        # until after gevent's monkey.patch_all() has run at app startup --
+        # a module-level import here executes as a side effect of
+        # `pikaraoke/__init__.py` importing this module, which happens
+        # before app.py reaches its own patch_all() call, and left urllib3
+        # holding unpatched ssl references (RecursionError on first request).
+        import requests
+
+        try:
+            resp = requests.get(
+                "https://www.youtube.com/oembed",
+                params={"url": f"https://www.youtube.com/watch?v={youtube_id}", "format": "json"},
+                timeout=5,
+            )
+            return resp.status_code == 200
+        except requests.RequestException as e:
+            logging.warning(f"Could not verify video availability for {youtube_id}: {e}")
+            return False
 
     def _clear_bg_video(self) -> None:
         """Hide the idle-screen background video while a real song plays."""

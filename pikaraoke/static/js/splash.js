@@ -215,7 +215,12 @@ window.onYouTubeIframeAPIReady = function () {
       // A library video may have been removed, made private, or had
       // embedding disabled on YouTube since it was downloaded -- treat
       // that the same as the video ending, so rotation doesn't get stuck.
+      // Every connected screen (not just the master) loads this same video
+      // independently, so every one of them hides YouTube's own "Video
+      // unavailable" UI immediately rather than letting it linger while a
+      // replacement is found.
       onError: () => {
+        $('#bg-video-container').fadeOut(300);
         if (isMaster) socket.emit("bg_video_ended");
       },
     },
