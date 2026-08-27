@@ -229,7 +229,10 @@
       }
     }
 
-    $("#bg-video-add").on("click", function (e) {
+    // Delegated (not direct) binding: this script runs in <head>, before
+    // #bg-video-add exists in the DOM, so a direct $("#bg-video-add").on(...)
+    // binds to an empty selection and silently does nothing.
+    $(document).on("click", "#bg-video-add", function (e) {
       e.preventDefault();
       if (!currentBgVideo) return;
       setUserCookie();
