@@ -334,6 +334,11 @@
                 // Update navigation highlighting
                 updateNavHighlight(url);
 
+                // Re-check home-page-only widgets (defined in base.html)
+                if (typeof updateBgVideoVisibility === 'function') {
+                    updateBgVideoVisibility(url.split('?')[0]);
+                }
+
                 // Load external resources (CSS and JS) before executing inline scripts
                 await loadExternalResources(newStylesheets, newScripts);
 

@@ -220,9 +220,19 @@
 
     function renderBgVideoWidget(data) {
       currentBgVideo = data;
+      updateBgVideoVisibility();
+    }
+
+    // Home-page only: re-checked after SPA navigation too, since this
+    // widget lives outside the swapped .box content area and wouldn't
+    // otherwise notice a page change that doesn't trigger a full reload.
+    // spa-navigation.js passes the new path explicitly (it calls this
+    // before history.pushState() runs, so window.location isn't updated yet).
+    function updateBgVideoVisibility(path) {
       var el = $("#bg-video-add");
-      if (data && data.title) {
-        $("#bg-video-title").text(data.title);
+      var isHome = (path !== undefined ? path : window.location.pathname) === '/';
+      if (isHome && currentBgVideo && currentBgVideo.title) {
+        $("#bg-video-title").text(currentBgVideo.title);
         el.removeClass("is-hidden");
       } else {
         el.addClass("is-hidden");
