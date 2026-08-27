@@ -155,6 +155,8 @@ class MockKaraoke:
     reset_now_playing_notification = Karaoke.reset_now_playing_notification
     pick_next_bg_video = Karaoke.pick_next_bg_video
     _clear_bg_video = Karaoke._clear_bg_video
+    _find_official_video_id = Karaoke._find_official_video_id
+    _NON_OFFICIAL_MARKERS = Karaoke._NON_OFFICIAL_MARKERS
     set_display_active = Karaoke.set_display_active
 
 

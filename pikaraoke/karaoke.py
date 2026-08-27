@@ -27,6 +27,7 @@ from pikaraoke.lib.get_platform import (
 )
 from pikaraoke.lib.karaoke_database import KaraokeDatabase
 from pikaraoke.lib.library_scanner import LibraryScanner, ScanResult
+from pikaraoke.lib.metadata_parser import clean_search_query
 from pikaraoke.lib.network import get_ip
 from pikaraoke.lib.playback_controller import PlaybackController
 from pikaraoke.lib.preference_manager import PreferenceManager
@@ -567,7 +568,14 @@ class Karaoke:
             self.socketio.emit("now_playing", self.get_now_playing(), namespace="/")
 
     def pick_next_bg_video(self) -> None:
-        """Pick a random library song with a YouTube ID for the idle-screen background.
+        """Pick a random library song for the idle-screen background.
+
+        Shows that song's official YouTube video, not the karaoke version
+        the library file itself was downloaded from -- searches YouTube for
+        a non-karaoke match and falls back to the library video's own ID if
+        the search fails or turns up nothing suitable. "Add to Queue" still
+        queues the library's own karaoke file regardless of which video is
+        showing.
 
         Broadcasts the new selection (or None, if the library has no eligible
         songs) to every connected client so splash screens and the "Add to
@@ -575,15 +583,45 @@ class Karaoke:
         """
         song = self.db.get_random_song_with_youtube_id()
         if song:
+            title = self.song_manager.display_name_from_path(song["file_path"])
             self.current_bg_video = {
                 "file_path": song["file_path"],
-                "youtube_id": song["youtube_id"],
-                "title": self.song_manager.display_name_from_path(song["file_path"]),
+                "youtube_id": self._find_official_video_id(title) or song["youtube_id"],
+                "title": title,
             }
         else:
             self.current_bg_video = None
         if self.socketio:
             self.socketio.emit("bg_video_changed", self.current_bg_video, namespace="/")
+
+    _NON_OFFICIAL_MARKERS = (
+        "karaoke",
+        "instrumental",
+        "cover",
+        "tribute",
+        "sing along",
+        "singalong",
+        "backing track",
+    )
+
+    def _find_official_video_id(self, title: str) -> str | None:
+        """Search YouTube for a non-karaoke official video matching this song title.
+
+        Returns None if the search fails, finds nothing, or every result
+        still looks like a karaoke/cover version.
+        """
+        query = clean_search_query(title)
+        if not query:
+            return None
+        try:
+            results = get_search_results(f"{query} official video")
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            logging.warning(f"Background video search failed for {query!r}: {e}")
+            return None
+        for result_title, _url, video_id, _channel, _duration in results:
+            if not any(marker in result_title.lower() for marker in self._NON_OFFICIAL_MARKERS):
+                return video_id
+        return None
 
     def _clear_bg_video(self) -> None:
         """Hide the idle-screen background video while a real song plays."""

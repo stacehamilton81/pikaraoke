@@ -239,9 +239,9 @@ const playBGYoutube = (play) => {
     if (ytPlayer.getVideoData().video_id !== splashBgVideo.youtube_id) {
       ytPlayer.loadVideoById(splashBgVideo.youtube_id);
     }
-    // Background video plays at half the normal singing volume.
+    // Background video plays at a third of the normal singing volume.
     ytPlayer.unMute();
-    ytPlayer.setVolume(Math.round(volume * 100 * 0.5));
+    ytPlayer.setVolume(Math.round(volume * 100 * 0.33));
     ytPlayer.playVideo();
     container.fadeIn(2000);
   } else {
