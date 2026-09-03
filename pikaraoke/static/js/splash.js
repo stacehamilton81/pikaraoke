@@ -608,7 +608,7 @@ const toggleBGMedia = (configKey, playFn, disabled) => {
 };
 
 const PREFERENCE_EFFECTS = {
-  disable_bg_video:    (v) => toggleBGMedia("disableBgVideo", playBGVideo, v),
+  disable_bg_video:    (v) => toggleBGMedia("disableBgVideo", playBackgroundVisual, v),
   disable_bg_music:    (v) => toggleBGMedia("disableBgMusic", playBGMusic, v),
   disable_score:       (v) => { PikaraokeConfig.disableScore = v; },
   show_splash_clock:   (v) => {
