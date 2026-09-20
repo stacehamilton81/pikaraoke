@@ -55,7 +55,6 @@
   {% set artwork_file = artwork_paths.get(song) %}
   {% set thumb = url_for('images.artwork', filename=artwork_file) if artwork_file else youtube_thumbnail_url(song) %}
   <div class="pk-list-row">
-    <span class="pk-list-index has-text-grey">{{ loop.index }}</span>
     <a
       class="fav-queue-link pk-list-main"
       title="Add '{{ display_name }}' to queue"

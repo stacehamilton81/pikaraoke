@@ -110,11 +110,6 @@
                  window.highlightAfterRefresh = decodeURIComponent(movedFile);
              }
 
-             // Immediately update row numbers to reflect new positions
-             $('#auto-refresh tbody tr:not(.disabled-sort)').each(function(i) {
-                 $(this).find('td:first').text(i + 1);
-             });
-
              // Send queue indices to backend
              $.post("{{ url_for('queue.reorder') }}", {
                  old_index: oldQueueIndex,
@@ -140,7 +135,6 @@
 
   // Column width constants
   var COL_WIDTH = {
-    number: '35px',
     drag: '44px',
     star: '32px',
     options: '50px'
@@ -172,17 +166,17 @@
       : '{{ url_for("static", filename="images/now-playing.gif") }}';
 
     var html = '<tr class="disabled-sort has-background-dark">';
-    html += '<td style="width: ' + COL_WIDTH.number + '; padding: 8px 8px; vertical-align: middle; text-align: center;">';
-    html += '<img src="' + iconSrc + '" alt="Now Playing" style="width: 35px; height: auto;">';
-    html += '</td>';
 
     if (isAdmin) {
       html += '<td style="width: ' + COL_WIDTH.drag + '; padding: 5px 0px; vertical-align: middle;"></td>';
     }
 
-    html += '<td style="padding: 8px 10px; vertical-align: middle;">';
+    html += '<td style="padding: 8px 6px; vertical-align: middle;">';
     html += '<div class="pk-row">';
+    html += '<div class="pk-thumb-badge">';
     html += songThumbHtml(np.now_playing_thumbnail);
+    html += '<img class="pk-thumb-badge-icon" src="' + iconSrc + '" alt="">';
+    html += '</div>';
     html += '<div class="pk-row-text is-flex is-flex-wrap-wrap is-align-items-baseline">';
     html += '<span class="has-text-success">' + np.now_playing_user + '</span>';
     html += '<span class="is-hidden-mobile has-text-grey mx-2">&bull;</span>';
@@ -323,7 +317,6 @@
   // Generate queue row HTML
   function generateQueueRow(e, index) {
     var html = '<tr data-index="' + index + '">';
-    html += '<td style="width: ' + COL_WIDTH.number + '; padding: 8px 8px; vertical-align: middle; text-align: center;">' + (index + 1) + '</td>';
 
     if (isAdmin) {
       html += '<td class="drag-handle" style="width: ' + COL_WIDTH.drag + '; vertical-align: middle; text-align: center; cursor: grab; touch-action: none;" title="{{ _("Drag to reorder") }}">';
@@ -331,7 +324,7 @@
       html += '</td>';
     }
 
-    html += '<td style="padding: 8px 10px; vertical-align: middle;">';
+    html += '<td style="padding: 8px 6px; vertical-align: middle;">';
     html += '<div class="pk-row">';
     html += songThumbHtml(e.artwork_url || youtubeThumbnailFromPath(e.file));
     html += '<div class="pk-row-text is-flex is-flex-wrap-wrap is-align-items-baseline">';
@@ -362,7 +355,7 @@
     var html = "<tbody>";
     var queue = window.queuePageState.queue;
     var np = window.queuePageState.nowPlaying;
-    var colSpan = isAdmin ? 5 : 3;
+    var colSpan = isAdmin ? 4 : 2;
 
     if (np && np.now_playing) {
       html += generateNowPlayingRow(np);
