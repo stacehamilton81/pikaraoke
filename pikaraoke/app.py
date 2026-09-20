@@ -32,6 +32,7 @@ from pikaraoke.lib.get_platform import (
     has_js_runtime,
     is_windows,
 )
+from pikaraoke.lib.metadata_parser import youtube_thumbnail_url
 from pikaraoke.lib.song_manager import SongManager
 from pikaraoke.lib.youtube_dl import upgrade_youtubedl
 from pikaraoke.routes.admin import admin_bp
@@ -277,6 +278,7 @@ def main() -> None:
     # Expose some functions to jinja templates
     app.jinja_env.globals.update(filename_from_path=k.song_manager.display_name_from_path)
     app.jinja_env.globals.update(url_escape=quote)
+    app.jinja_env.globals.update(youtube_thumbnail_url=youtube_thumbnail_url)
     app.jinja_env.globals.update(current_bg_video=lambda: k.current_bg_video)
     app.jinja_env.globals.update(display_active=lambda: k.display_active)
 

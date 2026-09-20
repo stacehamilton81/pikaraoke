@@ -1,17 +1,5 @@
 {% extends 'base.html' %} {% block header %}
 <h1>{% block title %}{% trans %}My Favorites{% endtrans %}{% endblock %}</h1>
-<style>
-  table {
-    width: 100%;
-    table-layout: auto;
-  }
-  td {
-    word-wrap: break-word;
-  }
-  .break-word {
-    word-break: break-all;
-  }
-</style>
 {% endblock %} {% block scripts %}
 <script>
   $(function () {
@@ -39,7 +27,7 @@
         body: JSON.stringify({ file_path: filePath }),
       }).then(function (r) {
         if (r.ok) {
-          btn.closest("tr").fadeOut(300, function () { $(this).remove(); });
+          btn.closest(".pk-list-row").fadeOut(300, function () { $(this).remove(); });
         }
       });
     });
@@ -61,30 +49,37 @@
 </p>
 
 {% if favorites %}
-<table style="width:100%">
+<div class="pk-list">
   {% for song in favorites %}
   {% set display_name = filename_from_path(song) %}
-  <tr>
-    <td style="padding: 5px 0">{{ loop.index }}</td>
-    <td style="padding-right: 0">
-      <a
-        class="fav-queue-link has-text-weight-bold has-text-success"
-        title="Add '{{ display_name }}' to queue"
-        href="{{ url_for('queue.enqueue') }}?song={{ url_escape(song.encode('utf-8', 'surrogateescape')) }}&user="
-      ><i class="icon icon-list-add"></i></a>
-    </td>
-    <td class="break-word">{{ display_name }}</td>
-    <td style="padding-left: 8px">
-      <a
-        class="unfav-btn has-text-warning"
-        data-song="{{ url_escape(song.encode('utf-8', 'surrogateescape')) }}"
-        href="#"
-        title="Remove from favorites"
-      >&#9733;</a>
-    </td>
-  </tr>
+  {% set thumb = youtube_thumbnail_url(song) %}
+  <div class="pk-list-row">
+    <span class="pk-list-index has-text-grey">{{ loop.index }}</span>
+    <a
+      class="fav-queue-link pk-list-main"
+      title="Add '{{ display_name }}' to queue"
+      href="{{ url_for('queue.enqueue') }}?song={{ url_escape(song.encode('utf-8', 'surrogateescape')) }}&user="
+    >
+      <div class="pk-row">
+        {% if thumb %}
+        <img class="pk-thumb" src="{{ thumb }}" alt="" loading="lazy">
+        {% else %}
+        <span class="pk-thumb pk-thumb-placeholder"><i class="icon icon-music"></i></span>
+        {% endif %}
+        <span class="pk-row-text" title="{{ display_name }}">{{ display_name }}</span>
+        <i class="icon icon-list-add has-text-success" style="flex-shrink: 0"></i>
+      </div>
+    </a>
+    <a
+      class="unfav-btn has-text-warning"
+      data-song="{{ url_escape(song.encode('utf-8', 'surrogateescape')) }}"
+      href="#"
+      title="Remove from favorites"
+      style="text-decoration: none; font-size: 1.1em"
+    >&#9733;</a>
+  </div>
   {% endfor %}
-</table>
+</div>
 {% else %}
 <p class="has-text-centered has-text-grey">
   {# MSG: Empty state shown when user has no favorites yet. #}

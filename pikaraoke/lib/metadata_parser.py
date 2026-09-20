@@ -743,6 +743,15 @@ def has_youtube_id(filename: str) -> bool:
     return bool(youtube_id_suffix(filename))
 
 
+def youtube_thumbnail_url(file_path: str) -> str | None:
+    """Build a YouTube thumbnail URL for a file, or None if it has no YouTube ID."""
+    suffix = youtube_id_suffix(file_path)
+    if not suffix:
+        return None
+    video_id = suffix.strip("- []")
+    return f"https://img.youtube.com/vi/{video_id}/mqdefault.jpg"
+
+
 def has_artist_title_separator(name: str) -> bool:
     """Check if a cleaned name contains an artist-title separator (' - ')."""
     return " - " in name

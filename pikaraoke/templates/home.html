@@ -30,10 +30,22 @@
 
 			$("#now-playing").html(nowPlayingHtml);
 			$(".control-box").show();
+			$("#now-playing-hero").addClass("is-live");
+
+			if (np.now_playing_thumbnail) {
+				$("#now-playing-thumb").attr("src", np.now_playing_thumbnail).show();
+				$("#now-playing-thumb-placeholder").hide();
+			} else {
+				$("#now-playing-thumb").hide();
+				$("#now-playing-thumb-placeholder").show();
+			}
 		} else {
 			// {# MSG: Message which shows in the "Now Playing" section when there is no song currently playing #}
 			$("#now-playing").html("{{ _('Nothing is playing right now.') }}");
 			$(".control-box").hide();
+			$("#now-playing-hero").removeClass("is-live");
+			$("#now-playing-thumb").hide();
+			$("#now-playing-thumb-placeholder").show();
 		}
 
 		if (np.up_next) {
@@ -176,55 +188,60 @@
 		});
 	});
 </script>
-{% endblock %} {% block header %}
-<h1>
-	{% block title %} {# MSG: Header showing the currently playing song. #} {% trans %}Now Playing{% endtrans %}
-	<img
-		style="display: none"
-		class="playing_gif control-box"
-		width="40"
-		src="{{  url_for('static', filename='images/now-playing.png') }}"
-	/>{% endblock %}
-</h1>
-{% endblock %} {% block content %}
+{% endblock %} {% block header %}{% endblock %} {% block content %}
 
-<p class="is-size-4 has-text-warning" id="now-playing">&nbsp;</p>
-
-<hr />
-<h3>{# MSG: Title for the section displaying the next song to be played. #} {% trans %}Next Song{% endtrans %}</h3>
-<p id="up-next" class="has-text-warning"></p>
-<hr />
-
-{% if admin %}
-<div class="has-background-black-bis box control-box" style="max-width: 500px; display: none">
-	{# MSG: Title of the box with controls such as pause and skip. #}
-	<h4>{% trans %}Player Control{% endtrans %}</h4>
-	<div class="is-size-3" style="display: flex; justify-content: space-between">
-		<div class="is-size-3">
-			{# MSG: Title attribute on the button to restart the current song. #}
-			<a title="{{ _('Restart Song') }}" id="restart"><i class="icon icon-to-start"></i> </a>&nbsp;&nbsp; {# MSG:
-			Title attribute on the button to play or pause the current song. #}
-			<a title="{{ _('Play/Pause') }}"><i id="pause-resume" class="icon icon-pause"></i> </a>&nbsp;&nbsp; {# MSG:
-			Title attribute on the button to skip to the next song. #}
-			<a title="{{ _('Stop Current Song') }}" id="skip"><i class="icon icon-to-end"></i> </a>
-		</div>
-		<div class="is-size-3" style="display: flex; align-items: center">
-			<i id="vol-down" class="icon icon-volume-down"></i>
-			<input
-				type="range"
-				min="0"
-				max="1"
-				value="{{ volume|default(0.85) }}"
-				step="0.025"
-				id="volume-slider"
-				style="margin: 0 8px 0px 5px; width: 100px"
-			/>
-			<i id="vol-up" class="icon icon-volume-up"></i>
+<div id="now-playing-hero" class="pk-hero">
+	<div class="pk-hero-art">
+		<img id="now-playing-thumb" class="pk-hero-thumb" style="display: none" src="" alt="" />
+		<div id="now-playing-thumb-placeholder" class="pk-hero-thumb pk-hero-thumb-placeholder">
+			<i class="icon icon-mic-1"></i>
 		</div>
 	</div>
-	<hr />
+	<p class="pk-hero-eyebrow">
+		{# MSG: Eyebrow label above the currently playing song title. #}
+		<span>{% trans %}Now Playing{% endtrans %}</span>
+		<img
+			style="display: none"
+			class="playing_gif control-box pk-hero-live-icon"
+			src="{{ url_for('static', filename='images/now-playing.png') }}"
+			alt=""
+		/>
+	</p>
+	<p class="pk-hero-title has-text-warning" id="now-playing">&nbsp;</p>
+</div>
+
+<div class="pk-section">
+	<h3 class="pk-section-title">{# MSG: Title for the section displaying the next song to be played. #} {% trans %}Next Song{% endtrans %}</h3>
+	<p id="up-next" class="has-text-warning"></p>
+</div>
+
+{% if admin %}
+<div class="pk-player-controls control-box" style="display: none">
+	{# MSG: Title of the box with controls such as pause and skip. #}
+	<h4 class="pk-section-title">{% trans %}Player Control{% endtrans %}</h4>
+	<div class="pk-transport">
+		{# MSG: Title attribute on the button to restart the current song. #}
+		<a title="{{ _('Restart Song') }}" id="restart" class="pk-transport-btn"><i class="icon icon-to-start"></i></a>
+		{# MSG: Title attribute on the button to play or pause the current song. #}
+		<a title="{{ _('Play/Pause') }}" class="pk-transport-btn pk-transport-btn-main"><i id="pause-resume" class="icon icon-pause"></i></a>
+		{# MSG: Title attribute on the button to skip to the next song. #}
+		<a title="{{ _('Stop Current Song') }}" id="skip" class="pk-transport-btn"><i class="icon icon-to-end"></i></a>
+	</div>
+	<div class="pk-volume">
+		<i id="vol-down" class="icon icon-volume-down"></i>
+		<input
+			type="range"
+			min="0"
+			max="1"
+			value="{{ volume|default(0.85) }}"
+			step="0.025"
+			id="volume-slider"
+		/>
+		<i id="vol-up" class="icon icon-volume-up"></i>
+	</div>
 
 	{% if is_transpose_enabled %}
+	<hr />
 	<div class="is-flex" style="justify-content: space-between">
 		<div>
 			{# MSG: Title of a control to change the key/pitch of the playing song. #}
@@ -256,6 +273,4 @@
 	{% endif %}
 </div>
 {% endif %}
-
-<div></div>
 {% endblock %}

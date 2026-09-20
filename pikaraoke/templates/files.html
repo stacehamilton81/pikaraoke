@@ -68,17 +68,6 @@
 		top: 3px;
 		z-index: 20;
 	}
-	table {
-		width: 100%;
-		table-layout: auto; /* Allows columns to adjust based on content */
-	}
-	td {
-		word-wrap: break-word; /* Ensures long words break to fit within the cell */
-	}
-	.break-word {
-		word-break: break-all; /* Ensures long words break to fit within the cell */
-	}
-
 	@media screen and (max-width: 500px) {
 		#alpha-bar {
 			font-size: 13px;
@@ -160,47 +149,49 @@
 </div>
 
 {{ pagination.links }} {{ pagination.info }}
-<table>
+<div class="pk-list">
 	{% for song in songs %}
 	{% set display_name = filename_from_path(song) %}
-	<tr value="{{ song }}">
-		<td style="padding: 5px 0px">{{loop.index + pagination.skip}}</td>
-		<td id="{{display_name[0].lower()}}" style="padding-right: 0">
-			<a
-				class="add-song-link has-text-weight-bold has-text-success"
-				title="Add '{{display_name}}' to queue"
-				href="{{url_for('queue.enqueue')}}?song={{url_escape(song.encode('utf-8','surrogateescape'))}}&user="
-				><i class="icon icon-list-add"></i>
-			</a>
-		</td>
-		<td class="break-word" style="padding-right: 0">{{display_name}}</td>
-		<td style="padding-right: 0; padding-left: 4px">
-			{%- set is_fav = song in favorite_paths -%}
-			<a
-				class="fav-toggle {% if is_fav %}is-favorited{% endif %} has-text-warning"
-				data-song="{{ url_escape(song.encode('utf-8','surrogateescape')) }}"
-				href="#"
-				title="{% if is_fav %}Remove from favorites{% else %}Add to favorites{% endif %}"
-				style="text-decoration: none; font-size: 1.1em"
-			><span class="fav-star">{% if is_fav %}&#9733;{% else %}&#9734;{% endif %}</span></a>
-		</td>
-		<td style="padding-right: 0">
-			{%- set play_count = play_counts.get(song, 0) -%}
-			{% if play_count > 0 %}
-			<span class="has-text-grey is-size-7" title="Times played">{{ play_count }}&times;</span>
-			{% endif %}
-		</td>
+	{% set thumb = youtube_thumbnail_url(song) %}
+	<div class="pk-list-row" value="{{ song }}">
+		<span class="pk-list-index has-text-grey">{{loop.index + pagination.skip}}</span>
+		<a
+			class="add-song-link pk-list-main"
+			title="Add '{{display_name}}' to queue"
+			href="{{url_for('queue.enqueue')}}?song={{url_escape(song.encode('utf-8','surrogateescape'))}}&user="
+		>
+			<div class="pk-row">
+				{% if thumb %}
+				<img class="pk-thumb" src="{{ thumb }}" alt="" loading="lazy">
+				{% else %}
+				<span class="pk-thumb pk-thumb-placeholder"><i class="icon icon-music"></i></span>
+				{% endif %}
+				<span class="pk-row-text" title="{{display_name}}">{{display_name}}</span>
+				<i class="icon icon-list-add has-text-success" style="flex-shrink: 0"></i>
+			</div>
+		</a>
+		{%- set is_fav = song in favorite_paths -%}
+		<a
+			class="fav-toggle {% if is_fav %}is-favorited{% endif %} has-text-warning"
+			data-song="{{ url_escape(song.encode('utf-8','surrogateescape')) }}"
+			href="#"
+			title="{% if is_fav %}Remove from favorites{% else %}Add to favorites{% endif %}"
+			style="text-decoration: none; font-size: 1.1em"
+		><span class="fav-star">{% if is_fav %}&#9733;{% else %}&#9734;{% endif %}</span></a>
+		{%- set play_count = play_counts.get(song, 0) -%}
+		{% if play_count > 0 %}
+		<span class="pk-list-count has-text-grey is-size-7" title="Times played">{{ play_count }}&times;</span>
+		{% endif %}
 		{% if admin %}
-		<td style="padding-right: 0">
-			<a
-				class="edit-button"
-				href="{{url_for('files.edit_file')}}?song={{url_escape(song.encode('utf-8','surrogateescape'))}}&referrer={{url_escape(current_url)}}"
-				title="Edit song"
-				><i class="icon icon-edit-1"></i>
-			</a>
-		</td>
-		{% endif %} {% endfor %}
-	</tr>
-</table>
+		<a
+			class="edit-button"
+			href="{{url_for('files.edit_file')}}?song={{url_escape(song.encode('utf-8','surrogateescape'))}}&referrer={{url_escape(current_url)}}"
+			title="Edit song"
+			><i class="icon icon-edit-1"></i>
+		</a>
+		{% endif %}
+	</div>
+	{% endfor %}
+</div>
 
 {{ pagination.links }} {% endblock %}

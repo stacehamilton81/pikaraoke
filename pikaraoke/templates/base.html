@@ -347,30 +347,25 @@
 </head>
 
 <style>
-  .navbar-item > i {
-    margin-right: 2px;
-  }
   .base-notification {
     position: fixed;
     width: 500px;
-    bottom: 5px;
+    max-width: calc(100% - 20px);
+    bottom: calc(var(--pk-bottom-nav-height, 66px) + 12px);
     left: 50%;
-    margin-left: -250px;
+    transform: translateX(-50%);
     z-index: 20;
-  }
-  .current-user {
-    position: fixed;
-    padding: 3px;
-    bottom: 5px;
-    right: 10px;
   }
   #bg-video-add {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    background-color: rgba(0, 0, 0, 0.75);
-    color: #48c78e;
+    gap: 6px;
+    padding: 6px 12px;
+    margin: 8px 0;
+    border-radius: 999px;
+    background-color: var(--pk-surface, rgba(0, 0, 0, 0.75));
+    border: 1px solid var(--pk-border, transparent);
+    color: var(--pk-accent, #48c78e);
     white-space: nowrap;
     overflow: hidden;
   }
@@ -386,81 +381,31 @@
   tr:nth-child(even) {
     background-color: rgb(50, 55, 55);
   }
-  @media screen and (max-width: 1088px) {
-    .navbar-brand > .navbar-item > span {
-      display: none;
-    }
-    .base-notification {
-      position: fixed;
-      width: 100%;
-      bottom: 5px;
-      left: 0px;
-      margin-left: 0px;
-    }
-    body {
-      min-height: 120vh;
-    }
-    .navbar-menu.is-active {
-      position: absolute;
-      right: 0px;
-    }
-  }
 </style>
 
 <body>
 
   {% if not blank_page %}
+  <header class="pk-topbar">
+    <a id="brand" class="pk-brand" href="{{ url_for('home.home') }}">
+      <img class="pk-brand-icon" src="{{ url_for('static', filename='images/microphone.png') }}" alt="" />
+      <span>{{ site_title }}</span>
+    </a>
+    <div class="pk-topbar-actions">
+      <a id="current-user" class="pk-user-chip is-hidden" href="#">
+        <i class="icon icon-mic-1" title="Current user"></i>
+        <span></span>
+      </a>
+      {# MSG: Navigation link for the info/about page. #}
+      <a id="info" class="pk-icon-btn navbar-item" href="{{ url_for('info.info') }}" title="{{ _('Info') }}">
+        <i class="icon icon-info-circled-1"></i>
+      </a>
+    </div>
+  </header>
+
   <div class="container" style="padding: 5px; max-width: 900px;">
-    <nav class="navbar" role="navigation" aria-label="main navigation">
-      <div class="navbar-brand" id="brand" style="padding-left: 10px">
-        <a id="home" class="navbar-item" href="{{ url_for('home.home') }}">
-          <i class="icon icon-home-2" title="Home"></i>
-          {# MSG: Navigation link for the home page. #}
-          <span>{% trans %}Home{% endtrans %}</span>
-        </a>
 
-        <a id="queue" class="navbar-item" href="{{ url_for('queue.queue') }}">
-          <i class="icon icon-list-numbered" title="Queue"></i>
-          {# MSG: Navigation link for the queue page. #}
-          <span>{% trans %}Queue{% endtrans %}</span>
-        </a>
-        <a id="search" class="navbar-item" href="{{ url_for('search.search') }}">
-          <i class="icon icon-search-1" title="Search"></i>
-          {# MSG: Navigation link for the search page add songs to the queue. #}
-          <span>{% trans %}Search{% endtrans %}</span>
-        </a>
-        <a id="browse" class="navbar-item" href="{{ url_for('files.browse') }}">
-          <i class="icon icon-folder-open-empty" title="Browse"></i>
-          {# MSG: Navigation link for the page where the user can add existing songs to the queue. #}
-          <span>{% trans %}Browse{% endtrans %}</span>
-        </a>
-        <a id="favorites" class="navbar-item" href="{{ url_for('users.favorites_page') }}">
-          <i title="Favorites" style="font-style: normal; margin-right: 2px">&#9733;</i>
-          {# MSG: Navigation link for the user's personal favorites playlist. #}
-          <span>{% trans %}Favorites{% endtrans %}</span>
-        </a>
-        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false">
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-        </a>
-      </div>
-      <div class="navbar-menu" id="menu">
-        <div class="navbar-end">
-          <a id="current-user" class="navbar-item is-hidden" href="#">
-            <i class="icon  icon-mic-1" title="Current user"></i>
-            <span></span>
-          </a>
-          <a id="info" class="navbar-item" href="{{ url_for('info.info') }}">
-            <i class="icon icon-info-circled-1" title="Info"></i>
-            <span>Pikaraoke</span>&nbsp;&nbsp;
-          </a>
-        </div>
-      </div>
-    </nav>
-
-    <!-- Home page only; lives outside .navbar-menu so it isn't hidden
-         behind the collapsed mobile hamburger menu. -->
+    <!-- Home page only; lives outside the bottom nav so it isn't hidden behind it. -->
     <div id="bg-video-add" class="is-hidden">
       {# MSG: Prefix before the title of the song currently playing as background video. #}
       <span>{% trans %}Now showing:{% endtrans %} <span id="bg-video-title"></span></span>
@@ -497,6 +442,34 @@
       </div>
     </div>
   </div>
+
+  <nav class="pk-bottom-nav" role="navigation" aria-label="{{ _('Primary') }}">
+    <a id="home" class="navbar-item" href="{{ url_for('home.home') }}">
+      <i class="icon icon-home-2" title="Home"></i>
+      {# MSG: Navigation link for the home page. #}
+      <span>{% trans %}Home{% endtrans %}</span>
+    </a>
+    <a id="queue" class="navbar-item" href="{{ url_for('queue.queue') }}">
+      <i class="icon icon-list-numbered" title="Queue"></i>
+      {# MSG: Navigation link for the queue page. #}
+      <span>{% trans %}Queue{% endtrans %}</span>
+    </a>
+    <a id="search" class="navbar-item" href="{{ url_for('search.search') }}">
+      <i class="icon icon-search-1" title="Search"></i>
+      {# MSG: Navigation link for the search page add songs to the queue. #}
+      <span>{% trans %}Search{% endtrans %}</span>
+    </a>
+    <a id="browse" class="navbar-item" href="{{ url_for('files.browse') }}">
+      <i class="icon icon-folder-open-empty" title="Browse"></i>
+      {# MSG: Navigation link for the page where the user can add existing songs to the queue. #}
+      <span>{% trans %}Browse{% endtrans %}</span>
+    </a>
+    <a id="favorites" class="navbar-item" href="{{ url_for('users.favorites_page') }}">
+      <i class="pk-tab-star" title="Favorites">&#9733;</i>
+      {# MSG: Navigation link for the user's personal favorites playlist. #}
+      <span>{% trans %}Favorites{% endtrans %}</span>
+    </a>
+  </nav>
   {% endif %}
 
 

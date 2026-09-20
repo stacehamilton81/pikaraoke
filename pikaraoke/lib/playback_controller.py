@@ -9,6 +9,7 @@ from flask_babel import _
 
 from pikaraoke.lib.events import EventSystem
 from pikaraoke.lib.file_resolver import delete_tmp_dir
+from pikaraoke.lib.metadata_parser import youtube_thumbnail_url
 from pikaraoke.lib.preference_manager import PreferenceManager
 from pikaraoke.lib.stream_manager import PlaybackResult, StreamManager
 
@@ -205,6 +206,11 @@ class PlaybackController:
         """
         return {
             "now_playing": self.now_playing,
+            "now_playing_thumbnail": (
+                youtube_thumbnail_url(self.now_playing_filename)
+                if self.now_playing_filename
+                else None
+            ),
             "now_playing_user": self.now_playing_user,
             "now_playing_duration": self.now_playing_duration,
             "now_playing_transpose": self.now_playing_transpose,

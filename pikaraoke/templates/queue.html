@@ -146,6 +146,25 @@
     options: '50px'
   };
 
+  // Build a thumbnail <img> (or a placeholder note icon) for a song row
+  function songThumbHtml(thumbnailUrl) {
+    if (thumbnailUrl) {
+      return '<img class="pk-thumb" src="' + thumbnailUrl + '" alt="" loading="lazy">';
+    }
+    return '<span class="pk-thumb pk-thumb-placeholder"><i class="icon icon-music"></i></span>';
+  }
+
+  // Mirrors pikaraoke.lib.metadata_parser.youtube_thumbnail_url: queue entries
+  // are pushed over the socket as plain JSON, so the thumbnail is derived
+  // client-side from the file's YouTube ID suffix instead of round-tripping.
+  function youtubeThumbnailFromPath(filePath) {
+    if (!filePath) return null;
+    var base = filePath.split(/[\\/]/).pop() || '';
+    var stem = base.replace(/\.[^./\\]+$/, '');
+    var match = stem.match(/---([A-Za-z0-9_-]{11})$/) || stem.match(/\[([A-Za-z0-9_-]{11})\]$/);
+    return match ? 'https://img.youtube.com/vi/' + match[1] + '/mqdefault.jpg' : null;
+  }
+
   // Generate now-playing row HTML
   function generateNowPlayingRow(np) {
     var iconSrc = np.is_paused
@@ -162,12 +181,14 @@
     }
 
     html += '<td style="padding: 8px 10px; vertical-align: middle;">';
-    html += '<div class="is-flex is-flex-wrap-wrap is-align-items-baseline">';
+    html += '<div class="pk-row">';
+    html += songThumbHtml(np.now_playing_thumbnail);
+    html += '<div class="pk-row-text is-flex is-flex-wrap-wrap is-align-items-baseline">';
     html += '<span class="has-text-success">' + np.now_playing_user + '</span>';
     html += '<span class="is-hidden-mobile has-text-grey mx-2">&bull;</span>';
     html += '<span class="has-text-weight-bold has-text-success is-hidden-mobile">' + np.now_playing + '</span>';
-    html += '<span class="is-size-7 has-text-weight-bold has-text-success is-hidden-tablet" style="width: 100%;">' + np.now_playing + '</span>';
-    html += '</div></td>';
+    html += '<span class="is-size-7 has-text-weight-bold has-text-success is-hidden-tablet pk-truncate" style="width: 100%;">' + np.now_playing + '</span>';
+    html += '</div></div></td>';
 
     if (isAdmin) {
       html += '<td style="width: ' + COL_WIDTH.options + '; vertical-align: middle; text-align: right;">';
@@ -311,12 +332,14 @@
     }
 
     html += '<td style="padding: 8px 10px; vertical-align: middle;">';
-    html += '<div class="is-flex is-flex-wrap-wrap is-align-items-baseline">';
+    html += '<div class="pk-row">';
+    html += songThumbHtml(youtubeThumbnailFromPath(e.file));
+    html += '<div class="pk-row-text is-flex is-flex-wrap-wrap is-align-items-baseline">';
     html += '<span class="has-text-success">' + e.user + '</span>';
     html += '<span class="is-hidden-mobile has-text-grey mx-2">&bull;</span>';
     html += '<span class="has-text-weight-bold is-hidden-mobile">' + e.title + '</span>';
-    html += '<span class="is-size-7 has-text-weight-bold is-hidden-tablet" style="width: 100%;">' + e.title + '</span>';
-    html += '</div></td>';
+    html += '<span class="is-size-7 has-text-weight-bold is-hidden-tablet pk-truncate" style="width: 100%;">' + e.title + '</span>';
+    html += '</div></div></td>';
 
     var isFav = window.userFavoriteFiles.has(e.file);
     html += '<td style="width: ' + COL_WIDTH.star + '; vertical-align: middle; text-align: center; padding: 0;">';
