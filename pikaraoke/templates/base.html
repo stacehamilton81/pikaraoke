@@ -389,9 +389,18 @@
       // Username change handler is now in spa-navigation.js
 
       // ---- Song row long-press options ----
-      $(document).on("mousedown touchstart", ".song-row-trigger", function () {
+      // touchmove tolerance: real fingers jitter a few px even held still,
+      // so only a move past this threshold should cancel the long-press.
+      var SONG_TOUCH_MOVE_TOLERANCE = 12;
+      var _songTouchStartX = 0;
+      var _songTouchStartY = 0;
+
+      $(document).on("mousedown touchstart", ".song-row-trigger", function (e) {
         _songLongPressed = false;
         var $el = $(this);
+        var touch = e.originalEvent && e.originalEvent.touches ? e.originalEvent.touches[0] : null;
+        _songTouchStartX = touch ? touch.clientX : e.clientX;
+        _songTouchStartY = touch ? touch.clientY : e.clientY;
         clearTimeout(_songPressTimer);
         _songPressTimer = setTimeout(function () {
           _songLongPressed = true;
@@ -399,8 +408,22 @@
           openSongOptionsModal($el);
         }, SONG_LONG_PRESS_MS);
       });
-      $(document).on("mouseup mouseleave touchend touchcancel touchmove", ".song-row-trigger", function () {
+      $(document).on("mouseup mouseleave touchend touchcancel", ".song-row-trigger", function () {
         clearTimeout(_songPressTimer);
+      });
+      $(document).on("touchmove", ".song-row-trigger", function (e) {
+        var touch = e.originalEvent.touches[0];
+        if (!touch) return;
+        var dx = Math.abs(touch.clientX - _songTouchStartX);
+        var dy = Math.abs(touch.clientY - _songTouchStartY);
+        if (dx > SONG_TOUCH_MOVE_TOLERANCE || dy > SONG_TOUCH_MOVE_TOLERANCE) {
+          clearTimeout(_songPressTimer);
+        }
+      });
+      $(document).on("contextmenu", ".song-row-trigger", function (e) {
+        // Suppress the native long-press context menu (Android "copy link",
+        // iOS Safari callout) so it doesn't fight with our own menu.
+        e.preventDefault();
       });
       $(document).on("click", ".song-row-trigger", function (e) {
         e.preventDefault();

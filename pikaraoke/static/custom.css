@@ -257,6 +257,14 @@ body {
   padding: 6px 4px;
   border-radius: var(--pk-radius-sm);
 }
+.song-row-trigger {
+  /* Suppress iOS Safari's long-press callout (Open/Copy/Share) and text
+     selection highlighting so they don't fight with our own long-press menu. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 .add-song-link:hover,
 .fav-queue-link:hover {
   background-color: var(--pk-surface-hover);
