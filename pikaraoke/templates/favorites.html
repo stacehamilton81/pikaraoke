@@ -2,36 +2,13 @@
 <h1>{% block title %}{% trans %}My Favorites{% endtrans %}{% endblock %}</h1>
 {% endblock %} {% block scripts %}
 <script>
-  $(function () {
-    $("a.fav-queue-link").click(function (e) {
-      e.preventDefault();
-      setUserCookie();
-      var user = Cookies.get("user");
-      $.get(this.href + encodeURIComponent(user), function (data) {
-        var obj = JSON.parse(data);
-        if (obj.success[0]) {
-          showNotification(obj.success[1], "is-success");
-        } else {
-          showNotification(obj.success[1], "is-danger");
-        }
-      });
-    });
-
-    $(document).on("click", ".unfav-btn", function (e) {
-      e.preventDefault();
-      var btn = $(this);
-      var filePath = decodeURIComponent(btn.data("song"));
-      fetch("/api/favorites", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file_path: filePath }),
-      }).then(function (r) {
-        if (r.ok) {
-          btn.closest(".pk-list-row").fadeOut(300, function () { $(this).remove(); });
-        }
-      });
-    });
-  });
+  // Favorites rows use the shared long-press song menu (see base.html);
+  // when a song is un-favorited here, fade it out of the list.
+  window.onSongFavoriteToggled = function ($row, isFavNow) {
+    if (!isFavNow) {
+      $row.closest(".pk-list-row").fadeOut(300, function () { $(this).remove(); });
+    }
+  };
 </script>
 {% endblock %} {% block content %}
 
@@ -56,9 +33,13 @@
   {% set thumb = url_for('images.artwork', filename=artwork_file) if artwork_file else youtube_thumbnail_url(song) %}
   <div class="pk-list-row">
     <a
-      class="fav-queue-link pk-list-main"
-      title="Add '{{ display_name }}' to queue"
+      class="fav-queue-link song-row-trigger pk-list-main"
+      title="{{ display_name }}"
       href="{{ url_for('queue.enqueue') }}?song={{ url_escape(song.encode('utf-8', 'surrogateescape')) }}&user="
+      data-song="{{ url_escape(song.encode('utf-8', 'surrogateescape')) }}"
+      data-title="{{ display_name }}"
+      data-fav="true"
+      {% if admin %}data-edit-url="{{url_for('files.edit_file')}}?song={{url_escape(song.encode('utf-8','surrogateescape'))}}&referrer={{url_escape(request.path)}}"{% endif %}
     >
       <div class="pk-row">
         {% if thumb %}
@@ -67,16 +48,8 @@
         <span class="pk-thumb pk-thumb-placeholder"><i class="icon icon-music"></i></span>
         {% endif %}
         <span class="pk-row-text" title="{{ display_name }}">{{ display_name }}</span>
-        <i class="icon icon-list-add has-text-success" style="flex-shrink: 0"></i>
       </div>
     </a>
-    <a
-      class="unfav-btn has-text-warning"
-      data-song="{{ url_escape(song.encode('utf-8', 'surrogateescape')) }}"
-      href="#"
-      title="Remove from favorites"
-      style="text-decoration: none; font-size: 1.1em"
-    >&#9733;</a>
   </div>
   {% endfor %}
 </div>

@@ -13,6 +13,7 @@ from pikaraoke.lib.current_app import (
     get_current_user_id,
     get_karaoke_instance,
     get_site_name,
+    is_admin,
 )
 
 _ = flask_babel.gettext
@@ -62,6 +63,7 @@ def favorites_page():
         user=user,
         favorites=favorites,
         artwork_paths=artwork_paths,
+        admin=is_admin(),
     )
 
 

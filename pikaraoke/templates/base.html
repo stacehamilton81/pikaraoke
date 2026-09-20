@@ -42,7 +42,11 @@
       // {# MSG: Generic error prefix shown before an error message. #}
       errorLabel: '{{ _("Error") }}',
       // {# MSG: Toast shown to a singer when their song is about to play next. SONG_TITLE is replaced with the title. #}
-      upNextMessage: '{{ _("You are up next: SONG_TITLE") }}'
+      upNextMessage: '{{ _("You are up next: SONG_TITLE") }}',
+      // {# MSG: Option in the long-press song menu to favorite a song. #}
+      addToFavorites: '{{ _("Add to Favorites") }}',
+      // {# MSG: Option in the long-press song menu to unfavorite a song. #}
+      removeFromFavorites: '{{ _("Remove from Favorites") }}'
     };
 
     function generateRandomString(length) {
@@ -262,6 +266,50 @@
       $.get("/bg_video/skip");
     });
 
+    // ---- Song row long-press options (Browse / Favorites) ----
+    // Tapping a ".song-row-trigger" queues the song directly; holding it
+    // opens a menu with Queue/Favorite/Edit instead. Each page that uses
+    // this (files.html, favorites.html) may define window.onSongFavoriteToggled
+    // to react to a favorite change on its own rows (e.g. remove the row).
+    window.onSongFavoriteToggled = null;
+
+    var _songPressTimer = null;
+    var _songLongPressed = false;
+    var SONG_LONG_PRESS_MS = 500;
+    var $activeSongRow = null;
+
+    function openSongOptionsModal($el) {
+      $activeSongRow = $el;
+      var isFav = !!$el.data("fav");
+      $("#song-options-title").text($el.data("title") || "");
+      $("#song-options-fav-icon").html(isFav ? "&#9733;" : "&#9734;");
+      $("#song-options-fav-label").text(
+        isFav ? window.translations.removeFromFavorites : window.translations.addToFavorites
+      );
+
+      var editUrl = $el.data("editUrl");
+      if (editUrl) {
+        $("#song-options-edit-btn").attr("href", editUrl).show();
+      } else {
+        $("#song-options-edit-btn").hide();
+      }
+
+      $("#song-options-modal-global").addClass("is-active");
+    }
+
+    function closeSongOptionsModal() {
+      $("#song-options-modal-global").removeClass("is-active");
+    }
+
+    function queueSongFromRow($el) {
+      setUserCookie();
+      var user = Cookies.get("user");
+      $.get($el.attr("href") + encodeURIComponent(user), function (data) {
+        var obj = JSON.parse(data);
+        showNotification(obj.success[1], obj.success[0] ? "is-success" : "is-danger");
+      });
+    }
+
     $(function () {
       connectSocket();
       renderBgVideoWidget(currentBgVideo);
@@ -339,6 +387,62 @@
       };
 
       // Username change handler is now in spa-navigation.js
+
+      // ---- Song row long-press options ----
+      $(document).on("mousedown touchstart", ".song-row-trigger", function () {
+        _songLongPressed = false;
+        var $el = $(this);
+        clearTimeout(_songPressTimer);
+        _songPressTimer = setTimeout(function () {
+          _songLongPressed = true;
+          if (navigator.vibrate) navigator.vibrate(15);
+          openSongOptionsModal($el);
+        }, SONG_LONG_PRESS_MS);
+      });
+      $(document).on("mouseup mouseleave touchend touchcancel touchmove", ".song-row-trigger", function () {
+        clearTimeout(_songPressTimer);
+      });
+      $(document).on("click", ".song-row-trigger", function (e) {
+        e.preventDefault();
+        if (_songLongPressed) {
+          _songLongPressed = false;
+          return;
+        }
+        queueSongFromRow($(this));
+      });
+
+      $("#song-options-close, #song-options-modal-global .modal-background").on("click", closeSongOptionsModal);
+
+      $("#song-options-queue-btn").on("click", function (e) {
+        e.preventDefault();
+        if ($activeSongRow) queueSongFromRow($activeSongRow);
+        closeSongOptionsModal();
+      });
+
+      $("#song-options-fav-btn").on("click", function (e) {
+        e.preventDefault();
+        var $row = $activeSongRow;
+        closeSongOptionsModal();
+        if (!$row) return;
+        if (!getStoredUserId()) {
+          showUserPicker(function () { openSongOptionsModal($row); });
+          return;
+        }
+        var song = decodeURIComponent($row.data("song"));
+        var isFav = !!$row.data("fav");
+        fetch("/api/favorites", {
+          method: isFav ? "DELETE" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ file_path: song }),
+        }).then(function (r) {
+          if (r.ok) {
+            $row.data("fav", !isFav);
+            if (typeof window.onSongFavoriteToggled === "function") {
+              window.onSongFavoriteToggled($row, !isFav);
+            }
+          }
+        });
+      });
 
     });
   </script>
@@ -537,6 +641,33 @@
           {% trans %}Continue as guest{% endtrans %}
         </a>
       </footer>
+    </div>
+  </div>
+
+  <!-- Song options modal (long-press on a song row in Browse / Favorites) -->
+  <div id="song-options-modal-global" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card" style="max-width: 400px; width: 90%">
+      <header class="modal-card-head" style="padding: 15px;">
+        <p class="modal-card-title is-size-6" id="song-options-title" style="max-width: 95%">&nbsp;</p>
+        <button class="delete" aria-label="close" id="song-options-close"></button>
+      </header>
+      <section class="modal-card-body" style="padding: 0;">
+        <a href="#" id="song-options-queue-btn" class="panel-block py-3">
+          <span class="icon has-text-success mr-2"><i class="icon icon-list-add"></i></span>
+          {# MSG: Option in the long-press song menu to add a song to the queue. #}
+          {% trans %}Add to Queue{% endtrans %}
+        </a>
+        <a href="#" id="song-options-fav-btn" class="panel-block py-3 has-text-warning">
+          <span class="icon mr-2" id="song-options-fav-icon">&#9734;</span>
+          <span id="song-options-fav-label"></span>
+        </a>
+        <a href="#" id="song-options-edit-btn" class="edit-button panel-block py-3" style="display: none">
+          <span class="icon mr-2"><i class="icon icon-edit-1"></i></span>
+          {# MSG: Option in the long-press song menu to edit a song's filename. #}
+          {% trans %}Edit Song{% endtrans %}
+        </a>
+      </section>
     </div>
   </div>
 
