@@ -152,7 +152,8 @@
 <div class="pk-list">
 	{% for song in songs %}
 	{% set display_name = filename_from_path(song) %}
-	{% set thumb = youtube_thumbnail_url(song) %}
+	{% set artwork_file = artwork_paths.get(song) %}
+	{% set thumb = url_for('images.artwork', filename=artwork_file) if artwork_file else youtube_thumbnail_url(song) %}
 	<div class="pk-list-row" value="{{ song }}">
 		<span class="pk-list-index has-text-grey">{{loop.index + pagination.skip}}</span>
 		<a

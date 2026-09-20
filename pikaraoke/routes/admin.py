@@ -88,6 +88,27 @@ def sync_library():
     return jsonify({"status": "already_syncing"})
 
 
+@admin_bp.route("/artwork_backfill")
+def artwork_backfill():
+    """Trigger a background album-artwork lookup for songs that don't have it yet."""
+    if not is_admin():
+        return jsonify({"error": "Unauthorized"}), 403
+    k = get_karaoke_instance()
+    started = k.artwork_backfill()
+    if started:
+        return jsonify({"status": "started"})
+    return jsonify({"status": "already_running"})
+
+
+@admin_bp.route("/artwork_backfill/status")
+def artwork_backfill_status():
+    """Return how many songs still need an artwork lookup."""
+    if not is_admin():
+        return jsonify({"error": "Unauthorized"}), 403
+    k = get_karaoke_instance()
+    return jsonify({"pending": k.db.count_songs_needing_artwork()})
+
+
 @admin_bp.route("/quit")
 def quit():
     """Exit the PiKaraoke application."""

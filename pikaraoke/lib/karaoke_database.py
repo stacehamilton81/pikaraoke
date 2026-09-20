@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS songs (
     last_enrichment_attempt TEXT,
     play_count INTEGER NOT NULL DEFAULT 0,
     last_played_at TEXT,
+    artwork_path TEXT,
+    artwork_status TEXT NOT NULL DEFAULT 'pending',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -104,6 +106,12 @@ class KaraokeDatabase:
                 )
             if "last_played_at" not in existing_columns:
                 self._conn.execute("ALTER TABLE songs ADD COLUMN last_played_at TEXT")
+            if "artwork_path" not in existing_columns:
+                self._conn.execute("ALTER TABLE songs ADD COLUMN artwork_path TEXT")
+            if "artwork_status" not in existing_columns:
+                self._conn.execute(
+                    "ALTER TABLE songs ADD COLUMN artwork_status TEXT NOT NULL DEFAULT 'pending'"
+                )
 
     # ------------------------------------------------------------------
     # Read operations
@@ -133,6 +141,43 @@ class KaraokeDatabase:
                 "ORDER BY RANDOM() LIMIT 1"
             ).fetchone()
             return dict(row) if row else None
+
+    def get_artwork_paths(self, file_paths: list[str]) -> dict[str, str]:
+        """Return {file_path: artwork_path} for songs that have cached artwork."""
+        if not file_paths:
+            return {}
+        with self._lock:
+            placeholders = ",".join("?" * len(file_paths))
+            rows = self._conn.execute(
+                f"SELECT file_path, artwork_path FROM songs "
+                f"WHERE file_path IN ({placeholders}) AND artwork_path IS NOT NULL",
+                file_paths,
+            ).fetchall()
+            return {row["file_path"]: row["artwork_path"] for row in rows}
+
+    def get_songs_needing_artwork(self) -> list[dict]:
+        """Return {id, file_path} for songs whose artwork hasn't been looked up yet."""
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT id, file_path FROM songs WHERE artwork_status = 'pending'"
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def count_songs_needing_artwork(self) -> int:
+        """Return how many songs still need an artwork lookup."""
+        with self._lock:
+            return self._conn.execute(
+                "SELECT COUNT(*) FROM songs WHERE artwork_status = 'pending'"
+            ).fetchone()[0]
+
+    def set_artwork_status(self, file_path: str, artwork_path: str | None, status: str) -> None:
+        """Record the result of an artwork lookup for a song (upsert-style update)."""
+        with self._lock, self._conn:
+            self._conn.execute(
+                "UPDATE songs SET artwork_path = ?, artwork_status = ?, "
+                "updated_at = CURRENT_TIMESTAMP WHERE file_path = ?",
+                (artwork_path, status, file_path),
+            )
 
     def get_play_counts(self, file_paths: list[str]) -> dict[str, int]:
         """Return {file_path: play_count} for the given paths (0 if never played)."""

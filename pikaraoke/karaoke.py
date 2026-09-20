@@ -12,6 +12,7 @@ import qrcode
 from flask_babel import _
 from qrcode.image.pure import PyPNGImage
 
+from pikaraoke.lib.artwork_manager import ArtworkManager
 from pikaraoke.lib.download_manager import DownloadManager
 from pikaraoke.lib.events import EventSystem
 from pikaraoke.lib.ffmpeg import (
@@ -211,6 +212,8 @@ class Karaoke:
         )
         self._scanner = LibraryScanner(self.db)
         self._sync_lock = threading.Lock()
+        self.artwork_manager = ArtworkManager(self.db, self.song_manager, get_data_directory())
+        self._artwork_backfill_lock = threading.Lock()
 
         # Currently-showing idle-screen background video, or None during playback
         # / when the library has no songs with a known YouTube ID.
@@ -248,6 +251,7 @@ class Karaoke:
         self.events.on("song_ended", self.update_now_playing_socket)
         self.events.on("skip_requested", lambda: self.playback_controller.skip(False))
         self.events.on("song_downloaded", self.song_manager.register_download)
+        self.events.on("song_downloaded", self.artwork_manager.fetch_for_song)
         self.events.on("playback_started", self._clear_bg_video)
         self.events.on("song_ended", lambda: self.pick_next_bg_video())
         self.events.on(
@@ -267,6 +271,24 @@ class Karaoke:
         self.events.on(
             "sync_finished",
             lambda: self.socketio.emit("sync_finished", namespace="/") if self.socketio else None,
+        )
+        self.events.on(
+            "artwork_backfill_progress",
+            lambda done, total: (
+                self.socketio.emit(
+                    "artwork_backfill_progress", {"done": done, "total": total}, namespace="/"
+                )
+                if self.socketio
+                else None
+            ),
+        )
+        self.events.on(
+            "artwork_backfill_finished",
+            lambda found: (
+                self.socketio.emit("artwork_backfill_finished", {"found": found}, namespace="/")
+                if self.socketio
+                else None
+            ),
         )
 
         # Initialize queue manager
@@ -355,6 +377,33 @@ class Karaoke:
         finally:
             self._sync_lock.release()
             self.events.emit("sync_finished")
+
+    def artwork_backfill(self) -> bool:
+        """Trigger a background album-artwork lookup for songs missing it.
+
+        Admin-triggered from the Info page. Returns False if a backfill is
+        already in progress.
+        """
+        if not self._artwork_backfill_lock.acquire(blocking=False):
+            return False
+        thread = threading.Thread(target=self._background_artwork_backfill, daemon=True)
+        thread.start()
+        return True
+
+    def _background_artwork_backfill(self) -> None:
+        found = 0
+        try:
+            logging.info("Background artwork backfill starting")
+            result = self.artwork_manager.backfill(
+                progress_callback=lambda done, total: self.events.emit(
+                    "artwork_backfill_progress", done, total
+                )
+            )
+            found = result["found"]
+            logging.info(f"Artwork backfill complete: {result}")
+        finally:
+            self._artwork_backfill_lock.release()
+            self.events.emit("artwork_backfill_finished", found)
 
     def _load_preferences(self, **cli_overrides: Any) -> None:
         """Load preference-driven attributes from config file.
@@ -555,6 +604,15 @@ class Karaoke:
 
         # Get playback state from PlaybackController
         playback_state = self.playback_controller.get_now_playing()
+
+        # Prefer cached album art over the raw YouTube video thumbnail, when available.
+        # Built as a literal path (not url_for) since this can run outside a request
+        # context, e.g. from a socket event handler.
+        now_playing_filename = self.playback_controller.now_playing_filename
+        if now_playing_filename:
+            artwork = self.db.get_artwork_paths([now_playing_filename]).get(now_playing_filename)
+            if artwork:
+                playback_state["now_playing_thumbnail"] = f"/artwork/{artwork}"
 
         return {
             **playback_state,

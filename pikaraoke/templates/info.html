@@ -178,6 +178,38 @@
 				});
 				showNotification("{{ _('Library sync complete') }}", "is-success");
 			});
+
+			// Album art backfill count + button
+			function refreshArtworkPendingCount() {
+				$.getJSON("{{ url_for('admin.artwork_backfill_status') }}", function(data) {
+					if (!data.error) $("#artwork-pending-count").text(data.pending);
+				});
+			}
+			refreshArtworkPendingCount();
+
+			$("#artwork-backfill-btn").click(function() {
+				var $btn = $(this);
+				$btn.addClass("is-loading").prop("disabled", true);
+				$.getJSON("{{ url_for('admin.artwork_backfill') }}", function(data) {
+					if (data.status !== "already_running") return;
+					// stays disabled -- artwork_backfill_finished will re-enable
+				}).fail(function() {
+					$btn.removeClass("is-loading").prop("disabled", false);
+				});
+			});
+
+			window.socket.on("artwork_backfill_progress", function(data) {
+				$("#artwork-pending-count").text(data.total - data.done);
+			});
+			window.socket.on("artwork_backfill_finished", function(data) {
+				$("#artwork-backfill-btn").removeClass("is-loading").prop("disabled", false);
+				refreshArtworkPendingCount();
+				showNotification(
+					{# MSG: Toast shown after the album art backfill finishes. FOUND_COUNT is replaced with a number. #}
+					"{{ _('Album art backfill complete: FOUND_COUNT found') }}".replace("FOUND_COUNT", data.found),
+					"is-success"
+				);
+			});
 		});
 	</script>
 {% endblock %}
@@ -259,6 +291,19 @@
 					<p class="is-size-7 has-text-warning mt-3">
 						{# MSG: Help text explaining what Sync Now does. #}
 						{% trans %}Reconciles the library with the song directory in the background.{% endtrans %}
+					</p>
+					<hr>
+					<p>
+						{# MSG: Count of songs still missing cached album artwork. #}
+						{% trans %}Songs missing album art:{% endtrans %} <strong id="artwork-pending-count">...</strong>
+					</p>
+					<button id="artwork-backfill-btn" class="button is-primary is-inverted">
+						{# MSG: Button to trigger a background album artwork lookup. #}
+						{% trans %}Fetch Album Art{% endtrans %}
+					</button>
+					<p class="is-size-7 has-text-warning mt-3">
+						{# MSG: Help text explaining what the album art backfill does. #}
+						{% trans %}Looks up and downloads album art for songs that don't have it yet.{% endtrans %}
 					</p>
 				</div>
 			</div>

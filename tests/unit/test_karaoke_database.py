@@ -231,6 +231,42 @@ class TestPlayCount:
         assert db.get_play_counts([]) == {}
 
 
+class TestArtwork:
+    def test_new_song_needs_artwork(self, db):
+        db.insert_songs([{"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"}])
+        assert db.get_songs_needing_artwork() == [{"id": 1, "file_path": "/songs/a.mp4"}]
+        assert db.count_songs_needing_artwork() == 1
+
+    def test_get_artwork_paths_empty_when_none_cached(self, db):
+        db.insert_songs([{"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"}])
+        assert db.get_artwork_paths(["/songs/a.mp4"]) == {}
+
+    def test_set_artwork_status_found(self, db):
+        db.insert_songs([{"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"}])
+        db.set_artwork_status("/songs/a.mp4", "abc123.jpg", "found")
+        assert db.get_artwork_paths(["/songs/a.mp4"]) == {"/songs/a.mp4": "abc123.jpg"}
+        assert db.count_songs_needing_artwork() == 0
+
+    def test_set_artwork_status_not_found_clears_pending_without_a_path(self, db):
+        db.insert_songs([{"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"}])
+        db.set_artwork_status("/songs/a.mp4", None, "not_found")
+        assert db.get_artwork_paths(["/songs/a.mp4"]) == {}
+        assert db.count_songs_needing_artwork() == 0
+
+    def test_get_artwork_paths_empty_input_returns_empty_dict(self, db):
+        assert db.get_artwork_paths([]) == {}
+
+    def test_get_songs_needing_artwork_excludes_resolved_songs(self, db):
+        db.insert_songs(
+            [
+                {"file_path": "/songs/a.mp4", "youtube_id": None, "format": "mp4"},
+                {"file_path": "/songs/b.mp4", "youtube_id": None, "format": "mp4"},
+            ]
+        )
+        db.set_artwork_status("/songs/a.mp4", "abc123.jpg", "found")
+        assert db.get_songs_needing_artwork() == [{"id": 2, "file_path": "/songs/b.mp4"}]
+
+
 class TestGetRandomSongWithYoutubeId:
     def test_returns_none_when_no_songs(self, db):
         assert db.get_random_song_with_youtube_id() is None
@@ -294,5 +330,9 @@ class TestSchemaMigration:
             # New column is usable going forward.
             db.increment_play_count("/songs/old.mp4")
             assert db.get_play_counts(["/songs/old.mp4"]) == {"/songs/old.mp4": 1}
+            # artwork_path/artwork_status columns were also retrofitted.
+            assert db.count_songs_needing_artwork() == 1
+            db.set_artwork_status("/songs/old.mp4", "art.jpg", "found")
+            assert db.get_artwork_paths(["/songs/old.mp4"]) == {"/songs/old.mp4": "art.jpg"}
         finally:
             db.close()

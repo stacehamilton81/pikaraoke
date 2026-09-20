@@ -333,7 +333,7 @@
 
     html += '<td style="padding: 8px 10px; vertical-align: middle;">';
     html += '<div class="pk-row">';
-    html += songThumbHtml(youtubeThumbnailFromPath(e.file));
+    html += songThumbHtml(e.artwork_url || youtubeThumbnailFromPath(e.file));
     html += '<div class="pk-row-text is-flex is-flex-wrap-wrap is-align-items-baseline">';
     html += '<span class="has-text-success">' + e.user + '</span>';
     html += '<span class="is-hidden-mobile has-text-grey mx-2">&bull;</span>';

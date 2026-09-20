@@ -119,6 +119,7 @@ def browse():
 
     page_songs = songs[start_index : start_index + results_per_page]
     play_counts = k.db.get_play_counts(page_songs)
+    artwork_paths = k.db.get_artwork_paths(page_songs)
 
     return render_template(
         "files.html",
@@ -133,6 +134,7 @@ def browse():
         current_url=current_url,
         favorite_paths=favorite_paths,
         play_counts=play_counts,
+        artwork_paths=artwork_paths,
     )
 
 

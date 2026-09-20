@@ -69,9 +69,22 @@ def queue():
 
 @queue_bp.route("/get_queue")
 def get_queue():
-    """Get the current song queue."""
+    """Get the current song queue, each entry annotated with a cached artwork URL if any."""
     k = get_karaoke_instance()
-    return json.dumps(k.queue_manager.queue)
+    queue = k.queue_manager.queue
+    artwork_paths = k.db.get_artwork_paths([item["file"] for item in queue])
+    enriched = [
+        {
+            **item,
+            "artwork_url": (
+                url_for("images.artwork", filename=artwork_paths[item["file"]])
+                if item["file"] in artwork_paths
+                else None
+            ),
+        }
+        for item in queue
+    ]
+    return json.dumps(enriched)
 
 
 @queue_bp.route("/queue/addrandom/<int:amount>", methods=["GET"])

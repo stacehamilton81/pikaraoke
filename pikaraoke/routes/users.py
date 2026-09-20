@@ -51,14 +51,17 @@ def favorites_page():
     user_id = get_current_user_id()
     user = k.db.get_user_by_id(user_id) if user_id else None
     favorites: list[str] = []
+    artwork_paths: dict[str, str] = {}
     if user_id:
         favorites = k.db.get_favorites(user_id)
+        artwork_paths = k.db.get_artwork_paths(favorites)
     return render_template(
         "favorites.html",
         site_title=site_name,
         title=_("Favorites"),
         user=user,
         favorites=favorites,
+        artwork_paths=artwork_paths,
     )
 
 

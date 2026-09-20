@@ -1,8 +1,8 @@
-"""Image serving routes for QR code and logo."""
+"""Image serving routes for QR code, logo, and cached album artwork."""
 import os
 
 import flask_babel
-from flask import send_file
+from flask import send_file, send_from_directory
 from flask_smorest import Blueprint
 
 from pikaraoke.lib.current_app import get_karaoke_instance
@@ -24,3 +24,10 @@ def logo():
     """Get the PiKaraoke logo image."""
     k = get_karaoke_instance()
     return send_file(os.path.abspath(k.logo_path), mimetype="image/png")
+
+
+@images_bp.route("/artwork/<filename>")
+def artwork(filename):
+    """Get a cached album artwork image."""
+    k = get_karaoke_instance()
+    return send_from_directory(k.artwork_manager.artwork_dir, filename)
