@@ -204,11 +204,19 @@
 			window.socket.on("artwork_backfill_finished", function(data) {
 				$("#artwork-backfill-btn").removeClass("is-loading").prop("disabled", false);
 				refreshArtworkPendingCount();
-				showNotification(
-					{# MSG: Toast shown after the album art backfill finishes. FOUND_COUNT is replaced with a number. #}
-					"{{ _('Album art backfill complete: FOUND_COUNT found') }}".replace("FOUND_COUNT", data.found),
-					"is-success"
-				);
+				if (data.blocked) {
+					showNotification(
+						{# MSG: Toast shown when the album art lookup service is rate-limiting us. #}
+						"{{ _('Album art lookup is being rate-limited -- try again in a few minutes.') }}",
+						"is-warning"
+					);
+				} else {
+					showNotification(
+						{# MSG: Toast shown after the album art backfill finishes. FOUND_COUNT is replaced with a number. #}
+						"{{ _('Album art backfill complete: FOUND_COUNT found') }}".replace("FOUND_COUNT", data.found),
+						"is-success"
+					);
+				}
 			});
 		});
 	</script>

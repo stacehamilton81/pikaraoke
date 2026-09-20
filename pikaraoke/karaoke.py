@@ -284,8 +284,12 @@ class Karaoke:
         )
         self.events.on(
             "artwork_backfill_finished",
-            lambda found: (
-                self.socketio.emit("artwork_backfill_finished", {"found": found}, namespace="/")
+            lambda found, blocked: (
+                self.socketio.emit(
+                    "artwork_backfill_finished",
+                    {"found": found, "blocked": blocked},
+                    namespace="/",
+                )
                 if self.socketio
                 else None
             ),
@@ -392,6 +396,7 @@ class Karaoke:
 
     def _background_artwork_backfill(self) -> None:
         found = 0
+        blocked = False
         try:
             logging.info("Background artwork backfill starting")
             result = self.artwork_manager.backfill(
@@ -400,10 +405,11 @@ class Karaoke:
                 )
             )
             found = result["found"]
+            blocked = result["blocked"]
             logging.info(f"Artwork backfill complete: {result}")
         finally:
             self._artwork_backfill_lock.release()
-            self.events.emit("artwork_backfill_finished", found)
+            self.events.emit("artwork_backfill_finished", found, blocked)
 
     def _load_preferences(self, **cli_overrides: Any) -> None:
         """Load preference-driven attributes from config file.
