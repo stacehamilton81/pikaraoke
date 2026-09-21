@@ -622,6 +622,7 @@ class Karaoke:
 
         return {
             **playback_state,
+            "now_playing_file": now_playing_filename,
             "up_next": next_song["title"] if next_song else None,
             "next_user": next_song["user"] if next_song else None,
             "volume": self.volume,
