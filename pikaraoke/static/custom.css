@@ -280,16 +280,29 @@ body {
 .pk-list-count {
   flex: 0 0 auto;
 }
-.pk-list-main .pk-row-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .pk-truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   display: block;
+}
+/* Splits a "Title - Artist" (or "Artist - Title") display name onto two
+   lines instead of showing it inline with the hyphen. */
+.pk-title-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.pk-title-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pk-title-line-sub {
+  font-size: 0.82em;
+  font-weight: 400;
+  color: var(--pk-text-muted);
 }
 .add-song-link,
 .fav-queue-link {

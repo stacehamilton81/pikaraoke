@@ -67,6 +67,26 @@
       return JSON.stringify(obj1) === JSON.stringify(obj2);
     }
 
+    // Splits a "Title - Artist" (or "Artist - Title") display name into its
+    // two parts on the FIRST " - " only, so any later dashes (e.g. inside a
+    // subtitle) stay with the second part rather than being split again.
+    function splitTitleOnce(name) {
+      var idx = name.indexOf(" - ");
+      if (idx === -1) return [name];
+      return [name.slice(0, idx), name.slice(idx + 3)];
+    }
+
+    // Renders a song name as up to two stacked lines instead of one
+    // "Title - Artist" line with the hyphen shown inline.
+    function titleLinesHtml(title, extraLine1Class) {
+      var parts = splitTitleOnce(title);
+      var html = '<span class="pk-title-line ' + (extraLine1Class || "") + '">' + parts[0] + "</span>";
+      if (parts.length > 1) {
+        html += '<span class="pk-title-line pk-title-line-sub">' + parts[1] + "</span>";
+      }
+      return html;
+    }
+
     function debounce(func, wait) {
       let timeout;
       return function(...args) {

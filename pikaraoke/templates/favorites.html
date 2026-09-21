@@ -31,6 +31,7 @@
   {% set display_name = filename_from_path(song) %}
   {% set artwork_file = artwork_paths.get(song) %}
   {% set thumb = url_for('images.artwork', filename=artwork_file) if artwork_file else youtube_thumbnail_url(song) %}
+  {% set title_parts = display_name.split(' - ', 1) %}
   <div class="pk-list-row">
     <a
       class="fav-queue-link song-row-trigger pk-list-main"
@@ -47,7 +48,10 @@
         {% else %}
         <span class="pk-thumb pk-thumb-placeholder"><i class="icon icon-music"></i></span>
         {% endif %}
-        <span class="pk-row-text" title="{{ display_name }}">{{ display_name }}</span>
+        <span class="pk-row-text pk-title-stack" title="{{ display_name }}">
+          <span class="pk-title-line">{{ title_parts[0] }}</span>
+          {% if title_parts|length > 1 %}<span class="pk-title-line pk-title-line-sub">{{ title_parts[1] }}</span>{% endif %}
+        </span>
       </div>
     </a>
   </div>

@@ -177,11 +177,9 @@
     html += songThumbHtml(np.now_playing_thumbnail);
     html += '<img class="pk-thumb-badge-icon" src="' + iconSrc + '" alt="">';
     html += '</div>';
-    html += '<div class="pk-row-text is-flex is-flex-wrap-wrap is-align-items-baseline">';
-    html += '<span class="has-text-success">' + np.now_playing_user + '</span>';
-    html += '<span class="is-hidden-mobile has-text-grey mx-2">&bull;</span>';
-    html += '<span class="has-text-weight-bold has-text-success is-hidden-mobile">' + np.now_playing + '</span>';
-    html += '<span class="is-size-7 has-text-weight-bold has-text-success is-hidden-tablet pk-truncate" style="width: 100%;">' + np.now_playing + '</span>';
+    html += '<div class="pk-row-text pk-title-stack">';
+    html += '<span class="pk-title-line has-text-success">' + np.now_playing_user + '</span>';
+    html += titleLinesHtml(np.now_playing, 'has-text-weight-bold');
     html += '</div></div></td>';
 
     if (isAdmin) {
@@ -327,11 +325,9 @@
     html += '<td style="padding: 8px 6px; vertical-align: middle;">';
     html += '<div class="pk-row">';
     html += songThumbHtml(e.artwork_url || youtubeThumbnailFromPath(e.file));
-    html += '<div class="pk-row-text is-flex is-flex-wrap-wrap is-align-items-baseline">';
-    html += '<span class="has-text-success">' + e.user + '</span>';
-    html += '<span class="is-hidden-mobile has-text-grey mx-2">&bull;</span>';
-    html += '<span class="has-text-weight-bold is-hidden-mobile">' + e.title + '</span>';
-    html += '<span class="is-size-7 has-text-weight-bold is-hidden-tablet pk-truncate" style="width: 100%;">' + e.title + '</span>';
+    html += '<div class="pk-row-text pk-title-stack">';
+    html += '<span class="pk-title-line has-text-success">' + e.user + '</span>';
+    html += titleLinesHtml(e.title, 'has-text-weight-bold');
     html += '</div></div></td>';
 
     var isFav = window.userFavoriteFiles.has(e.file);

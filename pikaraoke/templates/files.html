@@ -121,6 +121,7 @@
 	{% set artwork_file = artwork_paths.get(song) %}
 	{% set thumb = url_for('images.artwork', filename=artwork_file) if artwork_file else youtube_thumbnail_url(song) %}
 	{%- set is_fav = song in favorite_paths -%}
+	{% set title_parts = display_name.split(' - ', 1) %}
 	<div class="pk-list-row" value="{{ song }}">
 		<a
 			class="add-song-link song-row-trigger pk-list-main"
@@ -137,7 +138,10 @@
 				{% else %}
 				<span class="pk-thumb pk-thumb-placeholder"><i class="icon icon-music"></i></span>
 				{% endif %}
-				<span class="pk-row-text" title="{{display_name}}">{{display_name}}</span>
+				<span class="pk-row-text pk-title-stack" title="{{display_name}}">
+					<span class="pk-title-line">{{ title_parts[0] }}</span>
+					{% if title_parts|length > 1 %}<span class="pk-title-line pk-title-line-sub">{{ title_parts[1] }}</span>{% endif %}
+				</span>
 				{%- set play_count = play_counts.get(song, 0) -%}
 				{% if play_count > 0 %}
 				<span class="pk-list-count has-text-grey is-size-7" title="Times played">{{ play_count }}&times;</span>
