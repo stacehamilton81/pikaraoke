@@ -46,7 +46,11 @@
       // {# MSG: Option in the long-press song menu to favorite a song. #}
       addToFavorites: '{{ _("Add to Favorites") }}',
       // {# MSG: Option in the long-press song menu to unfavorite a song. #}
-      removeFromFavorites: '{{ _("Remove from Favorites") }}'
+      removeFromFavorites: '{{ _("Remove from Favorites") }}',
+      // {# MSG: Toast shown after favoriting a song. #}
+      addedToFavorites: '{{ _("Added to favorites") }}',
+      // {# MSG: Toast shown after unfavoriting a song. #}
+      removedFromFavorites: '{{ _("Removed from favorites") }}'
     };
 
     function generateRandomString(length) {
@@ -330,6 +334,35 @@
       });
     }
 
+    // ---- Song row quick-tap modal (Browse): Queue or Favorite, no Edit ----
+    var $quickModalRow = null;
+
+    function openSongQuickModal($el) {
+      $quickModalRow = $el;
+      var isFav = !!$el.data("fav");
+      $("#song-quick-title").html(titleLinesHtml($el.data("title") || ""));
+      $("#song-quick-fav-icon").html(isFav ? "&#9733;" : "&#9734;");
+      $("#song-quick-fav-label").text(
+        isFav ? window.translations.removeFromFavorites : window.translations.addToFavorites
+      );
+      $("#song-quick-fav-btn").toggleClass("is-favorited", isFav);
+
+      var thumbSrc = $el.find(".pk-thumb").attr("src");
+      if (thumbSrc) {
+        $("#song-quick-thumb").attr("src", thumbSrc).show();
+        $("#song-quick-thumb-placeholder").hide();
+      } else {
+        $("#song-quick-thumb").hide();
+        $("#song-quick-thumb-placeholder").show();
+      }
+
+      $("#song-quick-modal").addClass("is-active");
+    }
+
+    function closeSongQuickModal() {
+      $("#song-quick-modal").removeClass("is-active");
+    }
+
     $(function () {
       connectSocket();
       renderBgVideoWidget(currentBgVideo);
@@ -451,10 +484,51 @@
           _songLongPressed = false;
           return;
         }
-        queueSongFromRow($(this));
+        if ($(this).hasClass("pk-quick-tap")) {
+          openSongQuickModal($(this));
+        } else {
+          queueSongFromRow($(this));
+        }
       });
 
       $("#song-options-close, #song-options-modal-global .modal-background").on("click", closeSongOptionsModal);
+
+      $("#song-quick-close, #song-quick-modal .modal-background").on("click", closeSongQuickModal);
+
+      $("#song-quick-queue-btn").on("click", function (e) {
+        e.preventDefault();
+        if ($quickModalRow) queueSongFromRow($quickModalRow);
+        closeSongQuickModal();
+      });
+
+      $("#song-quick-fav-btn").on("click", function (e) {
+        e.preventDefault();
+        var $row = $quickModalRow;
+        closeSongQuickModal();
+        if (!$row) return;
+        if (!getStoredUserId()) {
+          showUserPicker(function () { openSongQuickModal($row); });
+          return;
+        }
+        var song = decodeURIComponent($row.data("song"));
+        var isFav = !!$row.data("fav");
+        fetch("/api/favorites", {
+          method: isFav ? "DELETE" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ file_path: song }),
+        }).then(function (r) {
+          if (r.ok) {
+            $row.data("fav", !isFav);
+            if (typeof window.onSongFavoriteToggled === "function") {
+              window.onSongFavoriteToggled($row, !isFav);
+            }
+            showNotification(
+              isFav ? window.translations.removedFromFavorites : window.translations.addedToFavorites,
+              "is-success"
+            );
+          }
+        });
+      });
 
       $("#song-options-queue-btn").on("click", function (e) {
         e.preventDefault();
@@ -711,6 +785,32 @@
           {% trans %}Edit Song{% endtrans %}
         </a>
       </section>
+    </div>
+  </div>
+
+  <!-- Song quick-tap modal (Browse): Queue or Favorite only, no Edit -->
+  <div id="song-quick-modal" class="modal">
+    <div class="modal-background"></div>
+    <div class="modal-card pk-quick-card">
+      <button class="delete pk-quick-close" aria-label="close" id="song-quick-close"></button>
+      <div class="pk-quick-art">
+        <img id="song-quick-thumb" src="" alt="" style="display: none" />
+        <div id="song-quick-thumb-placeholder" class="pk-quick-thumb-placeholder">
+          <i class="icon icon-music"></i>
+        </div>
+      </div>
+      <p class="pk-quick-title" id="song-quick-title">&nbsp;</p>
+      <div class="pk-quick-actions">
+        <button id="song-quick-queue-btn" class="button is-primary is-fullwidth pk-quick-btn">
+          <span class="icon"><i class="icon icon-list-add"></i></span>
+          {# MSG: Button in the quick song-action modal to add a song to the queue. #}
+          <span>{% trans %}Add to Queue{% endtrans %}</span>
+        </button>
+        <button id="song-quick-fav-btn" class="button is-primary is-fullwidth pk-quick-btn">
+          <span class="icon" id="song-quick-fav-icon">&#9734;</span>
+          <span id="song-quick-fav-label"></span>
+        </button>
+      </div>
     </div>
   </div>
 

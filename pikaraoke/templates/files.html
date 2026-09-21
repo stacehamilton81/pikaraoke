@@ -124,7 +124,7 @@
 	{% set title_parts = display_name.split(' - ', 1) %}
 	<div class="pk-list-row" value="{{ song }}">
 		<a
-			class="add-song-link song-row-trigger pk-list-main"
+			class="add-song-link song-row-trigger pk-quick-tap pk-list-main"
 			title="{{display_name}}"
 			href="{{url_for('queue.enqueue')}}?song={{url_escape(song.encode('utf-8','surrogateescape'))}}&user="
 			data-song="{{ url_escape(song.encode('utf-8','surrogateescape')) }}"

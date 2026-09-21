@@ -495,6 +495,75 @@ input[type="range"] {
   color: var(--pk-text) !important;
 }
 
+/* ---- Song quick-tap modal (Browse) ----------------------------------- */
+.pk-quick-card {
+  max-width: 340px;
+  width: 88%;
+  background: linear-gradient(160deg, var(--pk-bg-elevated), var(--pk-surface)) !important;
+  border: 1px solid var(--pk-border);
+  border-radius: var(--pk-radius-lg);
+  padding: 32px 24px 24px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65), 0 0 40px var(--pk-accent-soft);
+}
+.pk-quick-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+.pk-quick-art {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  margin: 0 auto 18px;
+  border-radius: var(--pk-radius-md);
+  overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 0 3px var(--pk-accent-soft);
+}
+.pk-quick-art img,
+.pk-quick-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pk-quick-thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, var(--pk-bg-elevated), var(--pk-surface));
+  font-size: 2.25rem;
+  color: var(--pk-text-muted);
+}
+.pk-quick-title {
+  display: flex;
+  flex-direction: column;
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  margin-bottom: 22px;
+}
+.pk-quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pk-quick-btn {
+  height: 52px !important;
+  font-size: 1rem;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(255, 45, 149, 0.35);
+}
+.pk-quick-btn:active {
+  transform: scale(0.97);
+}
+#song-quick-fav-btn.is-favorited {
+  background: var(--pk-surface) !important;
+  color: #ffc107 !important;
+  box-shadow: none;
+  border: 1px solid var(--pk-border) !important;
+}
+
 .custom-combobox {
   position: relative;
   display: inline-block;
