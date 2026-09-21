@@ -328,6 +328,14 @@
 						that.ignoreFocusOpen = false;
 					}, 50);
 				});
+
+				// Move the Search/Add-to-queue buttons to sit between the input and
+				// the dropdown, so on mobile they stay reachable right under the
+				// field being typed into instead of being pushed below the
+				// suggestion list (and under the on-screen keyboard).
+				// Note: despite the name, Selectize's `this.$control` is the
+				// ".selectize-input" box itself, not the outer wrapper.
+				$("#search-actions").insertAfter(that.$control);
 			},
 
 			onFocus: function () {
@@ -661,7 +669,7 @@
 				</div>
 				<input class="song_added_by" type="hidden" name="song_added_by" />
 			</div>
-			<div class="field mb-1">
+			<div class="field mb-1" id="search-actions">
 				<div class="control">
 					{# MSG: Submit button on the search form for searching YouTube. #}
 					<a class="button is-primary is-fullwidth" id="search-link">{% trans %}Search{% endtrans %}</a>
