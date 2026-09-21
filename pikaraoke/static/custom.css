@@ -7,10 +7,12 @@
   --pk-surface: #19191c;
   --pk-surface-hover: #232327;
   --pk-border: rgba(255, 255, 255, 0.08);
-  --pk-accent: #1ed760;
-  --pk-accent-hover: #2eeb70;
-  --pk-accent-soft: rgba(30, 215, 96, 0.16);
-  --pk-accent-ink: #04170b;
+  --pk-accent: #ff2d95;
+  --pk-accent-2: #7c3aed;
+  --pk-accent-gradient: linear-gradient(135deg, var(--pk-accent), var(--pk-accent-2));
+  --pk-accent-hover: #ff4fab;
+  --pk-accent-soft: rgba(255, 45, 149, 0.18);
+  --pk-accent-ink: #ffffff;
   --pk-text: #f5f5f7;
   --pk-text-muted: #9a9a9e;
   --pk-radius-lg: 18px;
@@ -19,6 +21,26 @@
   --pk-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   --pk-bottom-nav-height: 66px;
   --pk-topbar-height: 54px;
+
+  /* Retheme Bulma's own color system (bulma.min.css) so every ".has-text-*",
+     ".is-*", tag/badge/progress-bar etc. that isn't explicitly restyled below
+     also follows the app's pink/purple accent instead of Bulma's default
+     green/blue. */
+  --bulma-success-h: 330deg;
+  --bulma-success-s: 100%;
+  --bulma-success-l: 62%;
+  --bulma-primary-h: 330deg;
+  --bulma-primary-s: 100%;
+  --bulma-primary-l: 62%;
+  --bulma-link-h: 330deg;
+  --bulma-link-s: 100%;
+  --bulma-link-l: 62%;
+
+  /* Retheme bulma-dark.css's simpler hex-based overrides the same way. */
+  --dark-primary: var(--pk-accent);
+  --dark-link: var(--pk-accent);
+  --dark-link-hover: var(--pk-accent-hover);
+  --dark-success: var(--pk-accent);
 }
 
 html,
@@ -43,6 +65,16 @@ body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--pk-border);
+}
+.pk-topbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--pk-accent-gradient);
+  opacity: 0.8;
 }
 .pk-brand {
   display: flex;
@@ -114,6 +146,16 @@ body {
   border-top: 1px solid var(--pk-border);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+.pk-bottom-nav::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: var(--pk-accent-gradient);
+  opacity: 0.8;
+}
 .pk-bottom-nav .navbar-item {
   flex: 1 1 0;
   display: flex;
@@ -165,13 +207,13 @@ body {
 }
 .button.is-success,
 .button.is-primary {
-  background-color: var(--pk-accent) !important;
-  border-color: var(--pk-accent) !important;
+  background: var(--pk-accent-gradient) !important;
+  border-color: transparent !important;
   color: var(--pk-accent-ink) !important;
 }
 .button.is-success:hover,
 .button.is-primary:hover {
-  background-color: var(--pk-accent-hover) !important;
+  filter: brightness(1.1);
 }
 
 /* ---- Song thumbnails (queue / browse / favorites / search) ---------- */
@@ -306,6 +348,30 @@ input[type="range"] {
 #now-playing-hero.is-live .pk-hero-thumb-placeholder {
   box-shadow: 0 0 0 3px var(--pk-accent-soft), 0 12px 32px rgba(0, 0, 0, 0.5);
 }
+.pk-hero-fav-btn {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--pk-surface);
+  border: 2px solid var(--pk-bg);
+  box-shadow: var(--pk-shadow);
+  font-size: 1.3rem;
+  color: var(--pk-text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+.pk-hero-fav-btn.is-favorited {
+  color: #ffc107;
+}
+.pk-hero-fav-btn:active {
+  transform: scale(0.93);
+}
 .pk-hero-eyebrow {
   display: flex;
   align-items: center;
@@ -372,12 +438,12 @@ input[type="range"] {
 .pk-transport-btn-main {
   width: 60px;
   height: 60px;
-  background: var(--pk-accent);
+  background: var(--pk-accent-gradient);
   color: var(--pk-accent-ink) !important;
   font-size: 1.6rem;
 }
 .pk-transport-btn-main:hover {
-  background: var(--pk-accent-hover);
+  filter: brightness(1.1);
 }
 .pk-volume {
   display: flex;
@@ -441,7 +507,7 @@ input[type="range"] {
 }
 
 .control-box a:hover {
-  color: #74ccb3;
+  color: var(--pk-accent);
 }
 
 .pagination {
