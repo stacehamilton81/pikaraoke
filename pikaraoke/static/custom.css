@@ -557,6 +557,14 @@ input {
   /* prevents mobile zooming */
   font-size: 16px !important;
 }
+input[type="checkbox"] {
+  accent-color: var(--pk-accent);
+  width: 16px;
+  height: 16px;
+}
+.message {
+  border-radius: var(--pk-radius-md);
+}
 
 table {
   table-layout: fixed;

@@ -8,7 +8,7 @@
 
 	.row {
 		display: flex;
-		border-bottom: 1px solid #cccccc;
+		border-bottom: 1px solid var(--pk-border);
 	}
 
 	.col-icon {
@@ -20,11 +20,44 @@
 		font-size: 120%;
 	}
 
+	/* --- Selectize: retheme to match the app's dark surfaces -------- */
 	.selectize-input {
-		height: 40px;
-		border-top-right-radius: 0;
-		border-bottom-right-radius: 0;
+		min-height: 44px;
 		font-size: 1rem;
+		background-color: var(--pk-bg-elevated) !important;
+		border-color: var(--pk-border) !important;
+		border-radius: var(--pk-radius-md) !important;
+		color: var(--pk-text) !important;
+		box-shadow: none !important;
+	}
+	.selectize-input.focus {
+		border-color: var(--pk-accent) !important;
+		box-shadow: 0 0 0 1px var(--pk-accent) !important;
+	}
+	.selectize-input input {
+		color: var(--pk-text) !important;
+	}
+	.selectize-input > div,
+	.selectize-control.single .selectize-input {
+		color: var(--pk-text) !important;
+	}
+	.selectize-dropdown {
+		background-color: var(--pk-surface) !important;
+		border-color: var(--pk-border) !important;
+		border-radius: var(--pk-radius-md) !important;
+		color: var(--pk-text) !important;
+		overflow: hidden;
+		box-shadow: var(--pk-shadow) !important;
+	}
+	.selectize-dropdown .optgroup-header {
+		color: var(--pk-text-muted) !important;
+		background: transparent !important;
+	}
+	.selectize-dropdown-content [data-selectable] {
+		color: var(--pk-text) !important;
+	}
+	.selectize-dropdown-content [data-selectable].active {
+		background-color: var(--pk-surface-hover) !important;
 	}
 
 	/* --- Search result list ---------------------------------- */
@@ -39,9 +72,13 @@
 		align-items: stretch;
 		gap: 0.75rem;
 		padding: 0.75rem;
+		border-bottom: 1px solid var(--pk-border);
 	}
-	ul.search_result_items li:nth-child(odd) {
-		background-color: rgb(50, 55, 55);
+	ul.search_result_items li:last-child {
+		border-bottom: none;
+	}
+	ul.search_result_items li:hover {
+		background-color: var(--pk-surface-hover);
 	}
 	@media screen and (min-width: 768px) {
 		ul.search_result_items li {
@@ -56,6 +93,7 @@
 		cursor: pointer;
 		width: 100%;
 		flex-shrink: 0;
+		border-radius: var(--pk-radius-md);
 	}
 	@media screen and (min-width: 768px) {
 		#search-results .img-wrapper {
@@ -66,6 +104,7 @@
 		position: relative;
 		overflow: hidden;
 		aspect-ratio: 16 / 9;
+		border-radius: var(--pk-radius-md);
 	}
 	#search-results .img-wrapper img {
 		display: block;
@@ -94,7 +133,9 @@
 
 	#search-results .img-wrapper:hover img {
 		opacity: 0.7;
-		box-shadow: 0px 0px 3px 1px #878787;
+	}
+	#search-results .img-wrapper:hover {
+		box-shadow: 0 0 0 2px var(--pk-accent);
 	}
 
 	/* Semi-transparent circle behind the play icon */
@@ -607,21 +648,23 @@
 <div>
 	<div class="field" id="container_queue_form">
 		<form id="queue-form">
-			<div id="search-field" class="field has-addons mb-1">
+			<div id="search-field" class="field mb-2">
 				<div class="control is-expanded">
 					<select id="song_to_add" class="search-selectize is-size-7" name="song_to_add">
 						{# TODO MSG: Label #}
 						<optgroup label="{{ _('Available Songs') }}" id="available-songs"></optgroup>
 					</select>
 				</div>
+				<input class="song_added_by" type="hidden" name="song_added_by" />
+			</div>
+			<div class="field mb-1">
 				<div class="control">
 					{# MSG: Submit button on the search form for searching YouTube. #}
-					<a class="button is-warning" id="search-link">{% trans %}Search{% endtrans %}</a>
+					<a class="button is-primary is-fullwidth" id="search-link">{% trans %}Search{% endtrans %}</a>
 					{# MSG: Submit button on the search form when selecting a locally downloaded song. The button adds it to
 					the queue. #}
-					<a class="button is-info" id="add-queue-link">{% trans %}Add to queue{% endtrans %}</a>
+					<a class="button is-primary is-fullwidth" id="add-queue-link">{% trans %}Add to queue{% endtrans %}</a>
 				</div>
-				<input class="song_added_by" type="hidden" name="song_added_by" />
 			</div>
 			<div class="control is-flex is-justify-content-flex-end is-align-items-center mb-2">
 				<a id="clear-search" class="has-text-danger" style="margin-right: 15px">
@@ -659,7 +702,7 @@
 	</div>
 
 	<div>
-		<div id="advanced-settings" class="box has-background-black-bis" style="margin-top: 10px; display: none">
+		<div id="advanced-settings" class="box" style="margin-top: 10px; display: none">
 			<div class="control">
 				<label class="checkbox is-flex is-align-items-center">
 					<input type="checkbox" class="checkbox" id="include-non-karaoke" name="include-non-karaoke" />
@@ -745,7 +788,7 @@
 						{% if channel %}<div class="is-size-7 has-text-grey">{{ channel }}</div>{% endif %}
 						<a href="{{url}}" target="_blank" rel="noopener noreferrer" class="is-size-7 has-text-info">YouTube ↗</a>
 					</div>
-					<button class="button search_result_items_download">Download</button>
+					<button class="button is-primary search_result_items_download">Download</button>
 				</div>
 			</li>
 			{% endfor %}
